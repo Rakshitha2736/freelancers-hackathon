@@ -56,6 +56,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
       userId: req.user.id,
       rawText: extractedText,
       file: {
+        storedName: fileInfo.filename,
         originalName: fileInfo.originalName,
         mimeType: fileInfo.mimeType,
         size: fileInfo.size,
@@ -132,9 +133,10 @@ router.delete('/:analysisId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    if (analysis.file && analysis.file.originalName) {
+    if (analysis.file && (analysis.file.storedName || analysis.file.originalName)) {
       const uploadDir = path.join(__dirname, '../uploads');
-      const filepath = path.join(uploadDir, analysis.file.originalName);
+      const filename = analysis.file.storedName || analysis.file.originalName;
+      const filepath = path.join(uploadDir, filename);
       fileService.deleteFile(filepath);
     }
 

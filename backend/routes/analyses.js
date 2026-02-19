@@ -96,7 +96,7 @@ router.post('/generate', auth, async (req, res) => {
 
     if (!process.env.GEMINI_API_KEY) {
       console.error('[Generate] GEMINI_API_KEY is not set');
-      return res.status(500).json({ message: 'AI service is not configured. Please contact administrator.' });
+      return res.status(503).json({ message: 'AI service is not configured. Please contact administrator.' });
     }
 
     const trimmedText = rawText.trim();
@@ -148,6 +148,18 @@ router.post('/generate', auth, async (req, res) => {
     const tasksWithOwners = await mapTasksOwners(rawTasks);
 
     // Create analysis with chunking metadata
+    const meetingMetadata = req.body.meetingMetadata || {};
+    const parsedMeetingMetadata = {
+      title: meetingMetadata.title || '',
+      date: meetingMetadata.date ? new Date(meetingMetadata.date) : new Date(),
+      participants: Array.isArray(meetingMetadata.participants) ? meetingMetadata.participants : [],
+      meetingType: meetingMetadata.meetingType || 'Other',
+      location: meetingMetadata.location || '',
+      duration: Number.isFinite(meetingMetadata.duration)
+        ? meetingMetadata.duration
+        : parseInt(meetingMetadata.duration, 10) || 0,
+    };
+
     const analysis = await Analysis.create({
       userId: req.user._id,
       rawText: trimmedText,
@@ -155,6 +167,7 @@ router.post('/generate', auth, async (req, res) => {
       decisions: mergedResult.decisions || [],
       tasks: tasksWithOwners,
       isConfirmed: false,
+      meetingMetadata: parsedMeetingMetadata,
       metadata: {
         chunked: chunks.length > 1,
         totalChunks: chunks.length,

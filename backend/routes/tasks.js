@@ -26,7 +26,7 @@ async function mapOwner(ownerName) {
 // ─── GET /api/tasks ─────────────────────────────────────────────────────────
 router.get('/', auth, async (req, res) => {
   try {
-    const { mine, priority, status } = req.query;
+    const { mine, myTasksOnly, owner, priority, status } = req.query;
 
     const analyses = await Analysis.find({
       userId: req.user._id,
@@ -51,12 +51,17 @@ router.get('/', auth, async (req, res) => {
       });
     });
 
-    // Filter: mine=true → only tasks where ownerUserId matches logged-in user
-    if (mine === 'true') {
+    // Filter: mine/myTasksOnly → only tasks where ownerUserId matches logged-in user
+    if (mine === 'true' || myTasksOnly === 'true') {
       const userId = req.user._id.toString();
       tasks = tasks.filter(
         (t) => t.ownerUserId && t.ownerUserId.toString() === userId
       );
+    }
+
+    if (owner) {
+      const ownerRegex = new RegExp(owner, 'i');
+      tasks = tasks.filter((t) => ownerRegex.test(t.owner || ''));
     }
 
     if (priority) {

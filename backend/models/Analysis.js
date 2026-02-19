@@ -40,6 +40,7 @@ const analysisSchema = new mongoose.Schema(
     },
     // File Upload (Phase 2)
     file: {
+      storedName: { type: String, default: null },
       originalName: { type: String, default: null },
       mimeType: { type: String, default: null },
       size: { type: Number, default: null },
