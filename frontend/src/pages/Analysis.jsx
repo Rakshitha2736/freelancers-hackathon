@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import useSocket from '../hooks/useSocket';
 import TaskTable from '../components/TaskTable';
 import { TaskTemplateSelector } from '../components/TaskTemplateSelector';
-import { getAnalysis, confirmSummary, exportToNotion, getNotionDatabases } from '../services/api';
+import { getAnalysis, confirmSummary } from '../services/api';
 import { exportToJSON, exportToCSV, exportToMarkdown, saveDraft, loadDraft, deleteDraft } from '../utils/exportUtils';
 import { useKeyboardShortcuts } from '../utils/shortcuts';
 
@@ -25,11 +25,6 @@ const Analysis = () => {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [exporting, setExporting] = useState(false);
-  const [showNotionExport, setShowNotionExport] = useState(false);
-  const [notionDatabases, setNotionDatabases] = useState([]);
-  const [selectedDatabase, setSelectedDatabase] = useState('');
-  const [exportUrl, setExportUrl] = useState('');
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -156,45 +151,6 @@ const Analysis = () => {
     setDecisions((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleNotionExport = async () => {
-    if (!selectedDatabase) {
-      setError('Please select a Notion database');
-      return;
-    }
-
-    setExporting(true);
-    setError('');
-
-    try {
-      const res = await exportToNotion(id, selectedDatabase);
-      const notionUrl = res?.data?.url || '';
-      setExportUrl(notionUrl);
-      setSuccess('Successfully exported to Notion!');
-      setShowNotionExport(false);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(`Export failed: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleOpenNotionExport = async () => {
-    const dbId = localStorage.getItem('selectedNotionDatabase');
-    if (dbId) {
-      setSelectedDatabase(dbId);
-    }
-    
-    try {
-      const res = await getNotionDatabases();
-      setNotionDatabases(res.data.databases || []);
-    } catch (err) {
-      setError('Failed to fetch Notion databases. Make sure you have connected your Notion token.');
-    }
-
-    setShowNotionExport(true);
-  };
-
   const handleConfirm = async () => {
     setConfirming(true);
     setError('');
@@ -244,17 +200,6 @@ const Analysis = () => {
 
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
-
-        {exportUrl && (
-          <div className="alert" style={{
-            backgroundColor: '#ecfdf3',
-            borderColor: '#10b981',
-            color: '#065f46',
-            marginBottom: '24px'
-          }}>
-            Notion page created: <a href={exportUrl} target="_blank" rel="noopener noreferrer">Open in Notion</a>
-          </div>
-        )}
 
         {meetingMetadata && (
           <section className="analysis-section" style={{ marginBottom: '24px' }}>
@@ -437,102 +382,8 @@ const Analysis = () => {
             >
               💾 Save Draft
             </button>
-            <button
-              className="btn btn-outline"
-              onClick={handleOpenNotionExport}
-              style={{ display: localStorage.getItem('notionToken') ? 'block' : 'none' }}
-            >
-              🔗 Export to Notion
-            </button>
           </div>
         </div>
-
-        {/* Notion Export Modal */}
-        {showNotionExport && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '24px',
-              maxWidth: '400px',
-              width: '90%',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
-            }}>
-              <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Export to Notion</h3>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                  Select Database
-                </label>
-                <select
-                  value={selectedDatabase}
-                  onChange={(e) => setSelectedDatabase(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <option value="">-- Choose a database --</option>
-                  {notionDatabases.map(db => (
-                    <option key={db.id} value={db.id}>
-                      {db.title}
-                    </option>
-                  ))}
-                </select>
-                {notionDatabases.length === 0 && (
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                    No databases found. Please configure Notion integration in settings.
-                  </p>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setShowNotionExport(false)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#e9ecef',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleNotionExport}
-                  disabled={exporting || !selectedDatabase}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: exporting || !selectedDatabase ? 'not-allowed' : 'pointer',
-                    opacity: exporting || !selectedDatabase ? 0.6 : 1,
-                  }}
-                >
-                  {exporting ? 'Exporting...' : 'Export'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

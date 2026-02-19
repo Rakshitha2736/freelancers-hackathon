@@ -45,22 +45,6 @@ const analysisSchema = new mongoose.Schema(
       size: { type: Number, default: null },
       uploadedAt: { type: Date, default: null },
     },
-    // Notion Integration (Phase 3)
-    integrations: {
-      notion: {
-        exported: { type: Boolean, default: false },
-        pageId: { type: String, default: null },
-        exportedAt: { type: Date, default: null },
-        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
-      },
-      trello: {
-        exported: { type: Boolean, default: false },
-        boardId: { type: String, default: null },
-        cardIds: [{ type: String }],
-        exportedAt: { type: Date, default: null },
-        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
-      },
-    },
     metadata: {
       chunked: { type: Boolean, default: false },
       totalChunks: { type: Number, default: 1 },

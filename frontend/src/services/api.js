@@ -71,29 +71,4 @@ export const uploadMeetingFile = (formData) => API.post('/upload', formData, {
   },
 });
 
-// Integrations - Notion
-export const validateNotionToken = (notionToken) => API.post('/integrations/notion/validate', { notionToken });
-export const getNotionDatabases = () => {
-  const token = localStorage.getItem('notionToken');
-  return API.get('/integrations/notion/databases', {
-    headers: {
-      'X-Notion-Token': token,
-    },
-  });
-};
-export const exportToNotion = (analysisId, databaseId) => API.post('/integrations/notion/export', {
-  analysisId,
-  databaseId,
-  notionToken: localStorage.getItem('notionToken'),
-});
-export const getNotionExportStatus = (analysisId) => API.get(`/integrations/notion/status/${analysisId}`);
-export const revokeNotionIntegration = () => API.delete('/integrations/notion');
-
-// Integrations - Trello
-export const exportToTrello = (analysisId, listId) => API.post('/integrations/trello/export', {
-  analysisId,
-  listId,
-  trelloToken: localStorage.getItem('trelloToken'),
-});
-
 export default API;
