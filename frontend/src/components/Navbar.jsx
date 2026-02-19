@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -82,14 +81,12 @@ const Navbar = () => {
 
         <div className="navbar-right">
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline btn-sm navbar-theme-toggle"
             onClick={() => setIsDark(!isDark)}
             title={isDark ? 'Light mode' : 'Dark mode'}
-            style={{ marginRight: '12px' }}
           >
             {isDark ? '☀️' : '🌙'}
           </button>
-          <KeyboardShortcutsHelp />
           <div className="navbar-avatar">{getInitials(user?.name)}</div>
           <span className="navbar-user">{user?.name || user?.email || 'User'}</span>
           <button className="btn btn-outline btn-sm" onClick={handleLogout}>

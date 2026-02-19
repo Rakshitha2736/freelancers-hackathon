@@ -11,7 +11,6 @@ const MetricsCards = ({ metrics }) => {
         </svg>
       ),
       gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-      bg: '#eef2ff',
     },
     {
       label: 'High Priority',
@@ -22,7 +21,6 @@ const MetricsCards = ({ metrics }) => {
         </svg>
       ),
       gradient: 'linear-gradient(135deg, #dc2626, #f43f5e)',
-      bg: '#fef2f2',
     },
     {
       label: 'Overdue',
@@ -33,7 +31,6 @@ const MetricsCards = ({ metrics }) => {
         </svg>
       ),
       gradient: 'linear-gradient(135deg, #ea580c, #f97316)',
-      bg: '#fff7ed',
     },
     {
       label: 'Assigned to Me',
@@ -44,14 +41,13 @@ const MetricsCards = ({ metrics }) => {
         </svg>
       ),
       gradient: 'linear-gradient(135deg, #0891b2, #06b6d4)',
-      bg: '#ecfeff',
     },
   ];
 
   return (
     <div className="metrics-grid">
       {cards.map((card) => (
-        <div key={card.label} className="metric-card" style={{ background: card.bg }}>
+        <div key={card.label} className="metric-card">
           <div className="metric-icon-wrap" style={{ background: card.gradient }}>
             {card.icon}
           </div>

@@ -8,7 +8,7 @@ export const useSocket = (userId) => {
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:3001', {
+    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3002', {
       auth: {
         token: localStorage.getItem('token'),
         userId

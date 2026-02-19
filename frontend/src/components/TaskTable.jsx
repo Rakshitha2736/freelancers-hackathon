@@ -56,11 +56,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
             return (
               <tr 
                 key={task._id || index} 
-                className={overdue ? 'row-overdue' : ''}
-                style={{ 
-                  background: myTask ? '#eff6ff' : undefined,
-                  borderLeft: myTask ? '3px solid #3b82f6' : undefined
-                }}
+                className={`${overdue ? 'row-overdue' : ''} ${myTask ? 'row-my-task' : ''}`.trim()}
               >
                 <td className="td-num">{index + 1}</td>
                 <td>
@@ -97,10 +93,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                             {task.owner.charAt(0).toUpperCase()}
                           </div>
                           <div className="owner-info">
-                            <span className="owner-name" style={{ 
-                              fontWeight: myTask ? '600' : '500',
-                              color: myTask ? '#3b82f6' : '#1f2937'
-                            }}>
+                            <span className={`owner-name ${myTask ? 'owner-name-my-task' : ''}`.trim()}>
                               {task.owner}
                             </span>
                             {myTask && (

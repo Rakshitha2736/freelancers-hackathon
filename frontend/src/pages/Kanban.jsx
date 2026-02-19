@@ -186,6 +186,9 @@ const Kanban = () => {
     return new Date(date) < new Date();
   };
 
+  const totalTasks = tasks.pending.length + tasks.inProgress.length + tasks.completed.length;
+  const completionRate = totalTasks === 0 ? '0%' : `${Math.round((tasks.completed.length / totalTasks) * 100)}%`;
+
   if (loading) {
     return (
       <div className="page-wrapper">
@@ -342,51 +345,22 @@ const Kanban = () => {
         {error && <div className="alert alert-error">{error}</div>}
 
         {/* Progress Stats */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '16px', 
-          marginBottom: '24px',
-          padding: '16px',
-          background: '#f9fafb',
-          borderRadius: '12px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#1f2937' }}>
-              {tasks.pending.length + tasks.inProgress.length + tasks.completed.length}
-            </div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-              Total Tasks
-            </div>
+        <div className="kanban-stats-grid">
+          <div className="kanban-stat-card kanban-stat-total">
+            <div className="kanban-stat-value">{totalTasks}</div>
+            <div className="kanban-stat-label">Total Tasks</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#10b981' }}>
-              {tasks.completed.length}
-            </div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-              Completed
-            </div>
+          <div className="kanban-stat-card kanban-stat-completed">
+            <div className="kanban-stat-value">{tasks.completed.length}</div>
+            <div className="kanban-stat-label">Completed</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
-              {tasks.inProgress.length}
-            </div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-              In Progress
-            </div>
+          <div className="kanban-stat-card kanban-stat-progress">
+            <div className="kanban-stat-value">{tasks.inProgress.length}</div>
+            <div className="kanban-stat-label">In Progress</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#6366f1' }}>
-              {(() => {
-                const total = tasks.pending.length + tasks.inProgress.length + tasks.completed.length;
-                if (total === 0) return '0%';
-                return Math.round((tasks.completed.length / total) * 100) + '%';
-              })()}
-            </div>
-            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-              Completion Rate
-            </div>
+          <div className="kanban-stat-card kanban-stat-rate">
+            <div className="kanban-stat-value">{completionRate}</div>
+            <div className="kanban-stat-label">Completion Rate</div>
           </div>
         </div>
 

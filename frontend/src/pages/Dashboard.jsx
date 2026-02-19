@@ -169,7 +169,7 @@ const Dashboard = () => {
             className="btn btn-primary btn-glow"
             onClick={() => navigate('/summarize')}
           >
-            <span className="btn-icon-left">✨</span>
+            <span className="btn-icon-left"></span>
             New Summarization
           </button>
         </div>
