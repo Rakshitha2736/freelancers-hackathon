@@ -3,14 +3,10 @@ import React, { useState } from 'react';
 
 const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
   const safeData = initialData || {};
-  const participantsValue = Array.isArray(safeData.participants)
-    ? safeData.participants.join(', ')
-    : '';
 
   const [metadata, setMetadata] = useState({
     title: safeData.title || '',
     date: safeData.date || new Date().toISOString().split('T')[0],
-    participants: participantsValue,
     meetingType: safeData.meetingType || 'Other',
     location: safeData.location || '',
     duration: safeData.duration || 0,
@@ -35,14 +31,8 @@ const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
       return;
     }
 
-    const participantsArray = metadata.participants
-      .split(',')
-      .map(p => p.trim())
-      .filter(p => p);
-
     onSubmit({
       ...metadata,
-      participants: participantsArray,
       duration: parseInt(metadata.duration) || 0,
     });
   };
@@ -123,19 +113,6 @@ const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
           onChange={handleChange}
           placeholder="e.g., Zoom, Conference Room A"
           style={styles.input}
-        />
-      </div>
-
-      {/* Participants */}
-      <div style={styles.formGroup}>
-        <label htmlFor="participants">Participants (comma-separated)</label>
-        <textarea
-          id="participants"
-          name="participants"
-          value={metadata.participants}
-          onChange={handleChange}
-          placeholder="e.g., John Doe, Jane Smith, Bob Johnson"
-          style={{ ...styles.input, minHeight: '80px' }}
         />
       </div>
 
