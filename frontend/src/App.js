@@ -10,6 +10,7 @@ import Summarize from './pages/Summarize';
 import Analysis from './pages/Analysis';
 import Analytics from './pages/Analytics';
 import Kanban from './pages/Kanban';
+import IntegrationSettings from './pages/IntegrationSettings';
 import './App.css';
 
 function App() {
@@ -60,6 +61,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Kanban />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/integrations"
+            element={
+              <ProtectedRoute>
+                <IntegrationSettings />
               </ProtectedRoute>
             }
           />

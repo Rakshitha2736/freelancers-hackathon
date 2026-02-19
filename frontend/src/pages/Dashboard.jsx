@@ -30,6 +30,9 @@ const Dashboard = () => {
     owner: '',
     priority: '',
     myTasksOnly: false,
+    meetingType: '',
+    dateFrom: '',
+    dateTo: '',
   });
 
   const fetchData = useCallback(async () => {
@@ -108,14 +111,26 @@ const Dashboard = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (searchQuery.trim().length < 2) {
+    const hasQuery = searchQuery.trim().length >= 2;
+    const hasFilter = !!(filters.meetingType || filters.dateFrom || filters.dateTo);
+
+    if (!hasQuery && !hasFilter) {
+      setSearchResults([]);
+      return;
+    }
+
+    if (searchQuery.trim().length > 0 && searchQuery.trim().length < 2) {
       setSearchResults([]);
       return;
     }
 
     setSearching(true);
     try {
-      const res = await searchAnalyses(searchQuery);
+      const res = await searchAnalyses(searchQuery, {
+        meetingType: filters.meetingType,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+      });
       setSearchResults(res.data.results || []);
     } catch (err) {
       setError('Search failed.');
@@ -128,6 +143,8 @@ const Dashboard = () => {
     setSearchQuery('');
     setSearchResults([]);
   };
+
+  const canSearch = searchQuery.trim().length >= 2 || filters.meetingType || filters.dateFrom || filters.dateTo;
 
   return (
     <div className="page-wrapper">
@@ -182,7 +199,7 @@ const Dashboard = () => {
             <button 
               type="submit" 
               className="btn btn-secondary"
-              disabled={searching || searchQuery.trim().length < 2}
+              disabled={searching || !canSearch}
             >
               {searching ? 'Searching...' : 'Search'}
             </button>
@@ -244,7 +261,7 @@ const Dashboard = () => {
         <MetricsCards metrics={metrics} />
 
         {/* Filters */}
-        <div className="filters-bar">
+        <div className="filters-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="filter-group">
             <input
               type="text"
@@ -266,6 +283,40 @@ const Dashboard = () => {
               <option value="Medium">🟠 Medium</option>
               <option value="Low">🔵 Low</option>
             </select>
+          </div>
+          <div className="filter-group">
+            <select
+              value={filters.meetingType}
+              onChange={(e) => handleFilterChange('meetingType', e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Meeting Types</option>
+              <option value="Standup">Standup</option>
+              <option value="Planning">Planning</option>
+              <option value="Review">Review</option>
+              <option value="Retrospective">Retrospective</option>
+              <option value="1:1">1:1</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div className="filter-group" style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+              className="filter-input"
+              style={{ width: '150px' }}
+              title="From date"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+              className="filter-input"
+              style={{ width: '150px' }}
+              title="To date"
+            />
           </div>
           <label className="filter-toggle">
             <input

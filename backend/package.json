@@ -22,6 +22,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.77.0",
     "@google/generative-ai": "^0.24.1",
+    "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -30,8 +31,10 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.1",
-    "nodemailer": "^6.9.7",
+    "multer": "^2.0.2",
     "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7",
+    "pdf-parse": "^2.4.5",
     "socket.io": "^4.8.3",
     "validator": "^13.11.0"
   },
@@ -43,7 +46,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "coveragePathIgnorePatterns": ["/node_modules/"],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
     "collectCoverageFrom": [
       "**/*.js",
       "!**/node_modules/**",
@@ -52,7 +57,11 @@
       "!server.js",
       "!scripts/**"
     ],
-    "testMatch": ["**/tests/**/*.test.js"],
-    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ]
   }
 }

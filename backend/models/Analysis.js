@@ -25,6 +25,42 @@ const analysisSchema = new mongoose.Schema(
     tasks: [taskSchema],
     isConfirmed: { type: Boolean, default: false },
     confirmedAt: { type: Date, default: null },
+    // Meeting Metadata (Phase 1)
+    meetingMetadata: {
+      title: { type: String, default: '' },
+      date: { type: Date, default: () => new Date() },
+      participants: [{ type: String }],
+      meetingType: { 
+        type: String, 
+        enum: ['Standup', 'Planning', 'Review', 'Retrospective', '1:1', 'Other'],
+        default: 'Other'
+      },
+      location: { type: String, default: '' },
+      duration: { type: Number, default: 0 }, // in minutes
+    },
+    // File Upload (Phase 2)
+    file: {
+      originalName: { type: String, default: null },
+      mimeType: { type: String, default: null },
+      size: { type: Number, default: null },
+      uploadedAt: { type: Date, default: null },
+    },
+    // Notion Integration (Phase 3)
+    integrations: {
+      notion: {
+        exported: { type: Boolean, default: false },
+        pageId: { type: String, default: null },
+        exportedAt: { type: Date, default: null },
+        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+      },
+      trello: {
+        exported: { type: Boolean, default: false },
+        boardId: { type: String, default: null },
+        cardIds: [{ type: String }],
+        exportedAt: { type: Date, default: null },
+        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+      },
+    },
     metadata: {
       chunked: { type: Boolean, default: false },
       totalChunks: { type: Number, default: 1 },

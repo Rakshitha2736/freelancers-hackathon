@@ -328,41 +328,63 @@ router.post('/:id/confirm', auth, async (req, res) => {
 // ─── GET /api/analyses/search ───────────────────────────────────────────────
 router.get('/search', auth, async (req, res) => {
   try {
-    const { q } = req.query;
-    
-    if (!q || q.trim().length < 2) {
+    const { q, meetingType, dateFrom, dateTo } = req.query;
+
+    if ((!q || q.trim().length === 0) && !meetingType && !dateFrom && !dateTo) {
+      return res.status(400).json({ message: 'Provide a search query or at least one filter.' });
+    }
+
+    if (q && q.trim().length < 2) {
       return res.status(400).json({ message: 'Search query must be at least 2 characters.' });
     }
 
-    const searchRegex = new RegExp(q.trim(), 'i');
-
-    // Search in summary, decisions, task descriptions, and raw text
-    const analyses = await Analysis.find({
+    const baseQuery = {
       userId: req.user._id,
       isConfirmed: true,
-      $or: [
+    };
+
+    if (meetingType) {
+      baseQuery['meetingMetadata.meetingType'] = meetingType;
+    }
+
+    if (dateFrom || dateTo) {
+      baseQuery['meetingMetadata.date'] = {};
+      if (dateFrom) baseQuery['meetingMetadata.date'].$gte = new Date(dateFrom);
+      if (dateTo) baseQuery['meetingMetadata.date'].$lte = new Date(dateTo);
+    }
+
+    let searchRegex = null;
+    if (q && q.trim().length >= 2) {
+      searchRegex = new RegExp(q.trim(), 'i');
+      baseQuery.$or = [
         { summary: searchRegex },
         { decisions: searchRegex },
         { 'tasks.description': searchRegex },
         { 'tasks.owner': searchRegex },
-        { rawText: searchRegex }
-      ]
-    }).sort({ confirmedAt: -1 }).limit(20);
+        { rawText: searchRegex },
+        { 'meetingMetadata.title': searchRegex },
+        { 'meetingMetadata.participants': searchRegex }
+      ];
+    }
+
+    const analyses = await Analysis.find(baseQuery)
+      .sort({ confirmedAt: -1 })
+      .limit(20);
 
     // Highlight search results
     const results = analyses.map(analysis => ({
       _id: analysis._id,
-      summary: analysis.summary.substring(0, 200) + '...',
+      summary: `${(analysis.summary || '').substring(0, 200)}...`,
       confirmedAt: analysis.confirmedAt,
-      matchedTasks: analysis.tasks.filter(t => 
+      matchedTasks: searchRegex ? (analysis.tasks || []).filter(t => 
         searchRegex.test(t.description) || searchRegex.test(t.owner)
-      ).length,
-      matchedDecisions: analysis.decisions.filter(d => searchRegex.test(d)).length,
-      totalTasks: analysis.tasks.length,
-      totalDecisions: analysis.decisions.length
+      ).length : 0,
+      matchedDecisions: searchRegex ? (analysis.decisions || []).filter(d => searchRegex.test(d)).length : 0,
+      totalTasks: (analysis.tasks || []).length,
+      totalDecisions: (analysis.decisions || []).length
     }));
 
-    res.json({ results, total: results.length, query: q });
+    res.json({ results, total: results.length, query: q || '' });
   } catch (err) {
     console.error('Search error:', err);
     res.status(500).json({ message: 'Search failed.' });
