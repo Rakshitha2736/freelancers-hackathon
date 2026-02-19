@@ -13,10 +13,11 @@ const Kanban = () => {
   const [loading, setLoading] = useState(true);
   const [draggedTask, setDraggedTask] = useState(null);
   const [error, setError] = useState('');
+  const [showMyTasksOnly, setShowMyTasksOnly] = useState(false);
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [showMyTasksOnly]);
 
   const normalizeStatusKey = (status) => {
     // Backend sends: 'Pending', 'In Progress', 'Completed'
@@ -95,7 +96,12 @@ const Kanban = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await getTasks({ isConfirmed: true });
+      const params = { isConfirmed: true };
+      if (showMyTasksOnly) {
+        params.mine = true;
+      }
+      
+      const res = await getTasks(params);
       const allTasks = res.data.tasks || res.data || [];
       
       // Group tasks by status
@@ -194,41 +200,66 @@ const Kanban = () => {
     );
   }
 
-  const KanbanCard = ({ task }) => (
-    <div
-      className="kanban-card"
-      draggable
-      onDragStart={(e) => handleDragStart(e, task)}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="kanban-card-title">{task.description}</div>
-      <div className="kanban-card-meta">
-        <div className="kanban-card-row">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          <span>{task.owner || 'Unassigned'}</span>
-        </div>
-        <div className="kanban-card-row">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <span style={{ color: isOverdue(task.deadline, task.status) ? '#dc2626' : 'inherit' }}>
-            {formatDate(task.deadline)}
-          </span>
-        </div>
-        <div className="kanban-card-row">
-          <span className={`kanban-priority ${task.priority.toLowerCase()}`}>
-            {task.priority}
-          </span>
+  const KanbanCard = ({ task }) => {
+    const isMyTask = task.ownerUserId && user?._id && task.ownerUserId.toString() === user._id.toString();
+    
+    return (
+      <div
+        className="kanban-card"
+        draggable
+        onDragStart={(e) => handleDragStart(e, task)}
+        onDragEnd={handleDragEnd}
+        style={{ 
+          border: isMyTask ? '2px solid #3b82f6' : undefined,
+          boxShadow: isMyTask ? '0 4px 6px -1px rgba(59, 130, 246, 0.2)' : undefined
+        }}
+      >
+        {isMyTask && (
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            right: '8px',
+            background: '#3b82f6',
+            color: 'white',
+            fontSize: '11px',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontWeight: '600'
+          }}>
+            YOU
+          </div>
+        )}
+        <div className="kanban-card-title">{task.description}</div>
+        <div className="kanban-card-meta">
+          <div className="kanban-card-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span style={{ fontWeight: isMyTask ? '600' : '400', color: isMyTask ? '#3b82f6' : 'inherit' }}>
+              {task.owner || 'Unassigned'}
+            </span>
+          </div>
+          <div className="kanban-card-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span style={{ color: isOverdue(task.deadline, task.status) ? '#dc2626' : 'inherit' }}>
+              {formatDate(task.deadline)}
+            </span>
+          </div>
+          <div className="kanban-card-row">
+            <span className={`kanban-priority ${task.priority.toLowerCase()}`}>
+              {task.priority}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="page-wrapper">
@@ -238,8 +269,34 @@ const Kanban = () => {
           <div>
             <h1>Kanban Board</h1>
             <p className="text-muted">Drag and drop tasks to update their status</p>
+            {showMyTasksOnly && (
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '6px 12px', 
+                background: '#dbeafe', 
+                color: '#1e40af', 
+                borderRadius: '6px', 
+                display: 'inline-block',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}>
+                👤 Showing tasks assigned to: {user?.name || 'you'}
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              className={showMyTasksOnly ? "btn btn-primary" : "btn btn-secondary"}
+              onClick={() => setShowMyTasksOnly(!showMyTasksOnly)}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                fontWeight: showMyTasksOnly ? '600' : '500'
+              }}
+            >
+              {showMyTasksOnly ? '✓' : ''} My Tasks Only
+            </button>
             <button
               className="btn btn-secondary"
               onClick={() => navigate('/analytics')}
@@ -256,6 +313,55 @@ const Kanban = () => {
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
+
+        {/* Progress Stats */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: '16px', 
+          marginBottom: '24px',
+          padding: '16px',
+          background: '#f9fafb',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#1f2937' }}>
+              {tasks.pending.length + tasks.inProgress.length + tasks.completed.length}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+              Total Tasks
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#10b981' }}>
+              {tasks.completed.length}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+              Completed
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b' }}>
+              {tasks.inProgress.length}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+              In Progress
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#6366f1' }}>
+              {(() => {
+                const total = tasks.pending.length + tasks.inProgress.length + tasks.completed.length;
+                if (total === 0) return '0%';
+                return Math.round((tasks.completed.length / total) * 100) + '%';
+              })()}
+            </div>
+            <div style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+              Completion Rate
+            </div>
+          </div>
+        </div>
 
         <div className="kanban-container">
           {/* Pending Column */}

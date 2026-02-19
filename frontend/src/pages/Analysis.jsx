@@ -7,7 +7,6 @@ import TaskTable from '../components/TaskTable';
 import { TaskTemplateSelector } from '../components/TaskTemplateSelector';
 import { getAnalysis, confirmSummary } from '../services/api';
 import { exportToJSON, exportToCSV, exportToMarkdown, saveDraft, loadDraft, deleteDraft } from '../utils/exportUtils';
-import { useKeyboardShortcuts } from '../utils/shortcuts';
 
 const Analysis = () => {
   const { id } = useParams();
@@ -148,31 +147,6 @@ const Analysis = () => {
 
     return () => clearInterval(interval);
   }, [id, summary, decisions, tasks]);
-
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    SAVE_DRAFT: () => {
-      saveDraft(id, { summary, decisions, tasks });
-      setSuccess('Draft saved!');
-      setTimeout(() => setSuccess(''), 2000);
-    },
-    EXPORT_JSON: () => {
-      exportToJSON({ summary, decisions, tasks, metadata }, `analysis-${id}.json`);
-    },
-    EXPORT_CSV: () => {
-      exportToCSV({ summary, decisions, tasks, metadata }, `analysis-${id}.csv`);
-    },
-    NEW_TASK: () => {
-      const newTask = {
-        description: '',
-        owner: '',
-        deadline: '',
-        priority: 'Medium',
-        status: 'Pending'
-      };
-      setTasks(prev => [...prev, newTask]);
-    }
-  });
 
   const handleTaskUpdate = (index, field, value) => {
     setTasks((prev) =>
@@ -441,14 +415,12 @@ const Analysis = () => {
             <button
               className="btn btn-outline"
               onClick={() => exportToJSON({ summary, decisions, tasks, metadata }, `analysis-${id}.json`)}
-              title="Ctrl+Shift+E"
             >
-              📄 JSON
+              💾 Export JSON
             </button>
             <button
               className="btn btn-outline"
               onClick={() => exportToCSV({ summary, decisions, tasks, metadata }, `analysis-${id}.csv`)}
-              title="Ctrl+Shift+C"
             >
               📊 CSV
             </button>
@@ -462,10 +434,9 @@ const Analysis = () => {
               className="btn btn-outline"
               onClick={() => {
                 saveDraft(id, { summary, decisions, tasks });
-                setSuccess('Draft saved! (Ctrl+S)');
+                setSuccess('Draft saved!');
                 setTimeout(() => setSuccess(''), 2000);
               }}
-              title="Ctrl+S"
             >
               💾 Save Draft
             </button>
