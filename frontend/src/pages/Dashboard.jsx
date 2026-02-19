@@ -42,7 +42,7 @@ const Dashboard = () => {
       const params = { isConfirmed: true };
       if (filters.owner) params.owner = filters.owner;
       if (filters.priority) params.priority = filters.priority;
-      if (filters.myTasksOnly && user) params.owner = user.name || user.email;
+      if (filters.myTasksOnly) params.mine = true;
 
       const [tasksRes, metricsRes] = await Promise.all([
         getTasks(params),

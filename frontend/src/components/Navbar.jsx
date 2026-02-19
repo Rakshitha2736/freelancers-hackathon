@@ -78,15 +78,6 @@ const Navbar = () => {
             </svg>
             Summarize
           </Link>
-          <Link
-            to="/integrations"
-            className={`nav-link ${isActive('/integrations') ? 'active' : ''}`}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 1a1 1 0 100 2 1 1 0 000-2zM3 8a1 1 0 100 2 1 1 0 000-2zm10 0a1 1 0 100 2 1 1 0 000-2zM8 13a1 1 0 100 2 1 1 0 000-2zM5.307 3.307a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414-1.414l-2-2zm5.586 5.586a1 1 0 10-1.414 1.414l2 2a1 1 0 001.414-1.414l-2-2zM9.5 5a1 1 0 11-2 0 1 1 0 012 0zm-4 4a1 1 0 11-2 0 1 1 0 012 0z"/>
-            </svg>
-            Integrations
-          </Link>
         </div>
 
         <div className="navbar-right">

@@ -10,7 +10,6 @@ const analysisRoutes = require('./routes/analyses');
 const taskRoutes = require('./routes/tasks');
 const analyticsRoutes = require('./routes/analytics');
 const uploadRoutes = require('./routes/upload');
-const integrationRoutes = require('./routes/integrations');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,7 +25,6 @@ app.use('/api/analyses', analysisRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/integrations', integrationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

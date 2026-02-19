@@ -40,26 +40,11 @@ const analysisSchema = new mongoose.Schema(
     },
     // File Upload (Phase 2)
     file: {
+      storedName: { type: String, default: null },
       originalName: { type: String, default: null },
       mimeType: { type: String, default: null },
       size: { type: Number, default: null },
       uploadedAt: { type: Date, default: null },
-    },
-    // Notion Integration (Phase 3)
-    integrations: {
-      notion: {
-        exported: { type: Boolean, default: false },
-        pageId: { type: String, default: null },
-        exportedAt: { type: Date, default: null },
-        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
-      },
-      trello: {
-        exported: { type: Boolean, default: false },
-        boardId: { type: String, default: null },
-        cardIds: [{ type: String }],
-        exportedAt: { type: Date, default: null },
-        exportStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
-      },
     },
     metadata: {
       chunked: { type: Boolean, default: false },
