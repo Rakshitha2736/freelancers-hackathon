@@ -10,7 +10,7 @@ import { getTasks, getMetrics, updateTask, searchAnalyses } from '../services/ap
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { connected, on } = useSocket(user?._id);
+  const { connected, on, off } = useSocket(user?._id);
 
   const [tasks, setTasks] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -82,7 +82,7 @@ const Dashboard = () => {
     };
 
     const handleAnalysisUpdate = (data) => {
-      // Refresh metrics when analysis is updated
+      // Refresh all data when analysis is updated (including new tasks with owners)
       fetchData();
     };
 
@@ -91,9 +91,11 @@ const Dashboard = () => {
     on('analysis:updated', handleAnalysisUpdate);
 
     return () => {
-      // Note: useSocket's off method would go here if implementing cleanup
+      off('task:updated', handleTaskUpdate);
+      off('task:deleted', handleTaskDeleted);
+      off('analysis:updated', handleAnalysisUpdate);
     };
-  }, [connected, on, fetchData]);
+  }, [connected, on, off, fetchData]);
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => {
@@ -349,7 +351,7 @@ const Dashboard = () => {
             <p>Loading tasks...</p>
           </div>
         ) : (
-          <TaskTable tasks={tasks} onUpdate={handleTaskUpdate} editable={false} showStatus={false} />
+          <TaskTable tasks={tasks} onUpdate={handleTaskUpdate} editable={true} showStatus={false} />
         )}
       </main>
     </div>

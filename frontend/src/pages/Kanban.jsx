@@ -8,7 +8,7 @@ import { getTasks, updateTask } from '../services/api';
 const Kanban = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { connected, on } = useSocket(user?._id);
+  const { connected, on, off } = useSocket(user?._id);
   const [tasks, setTasks] = useState({ pending: [], inProgress: [], completed: [] });
   const [loading, setLoading] = useState(true);
   const [draggedTask, setDraggedTask] = useState(null);
@@ -75,13 +75,21 @@ const Kanban = () => {
       }));
     };
 
+    const handleAnalysisUpdate = () => {
+      // Refetch all tasks when analysis is updated (new tasks with owners)
+      fetchTasks();
+    };
+
     on('task:updated', handleTaskUpdate);
     on('task:deleted', handleTaskDeleted);
+    on('analysis:updated', handleAnalysisUpdate);
 
     return () => {
-      // Cleanup handled by useSocket hook
+      off('task:updated', handleTaskUpdate);
+      off('task:deleted', handleTaskDeleted);
+      off('analysis:updated', handleAnalysisUpdate);
     };
-  }, [connected, on]);
+  }, [connected, on, off]);
 
   const fetchTasks = async () => {
     setLoading(true);
