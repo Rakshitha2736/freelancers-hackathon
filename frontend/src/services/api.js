@@ -41,11 +41,11 @@ export const login = (data) => API.post('/auth/login', data);
 export const getMe = () => API.get('/auth/me');
 
 // Analyses
-export const generateSummary = (data) => API.post('/analyses/generate', data);
+export const generateSummary = (data) => API.post('/analyses/generate', data, { timeout: 60000 });
 export const getAnalysis = (id) => API.get(`/analyses/${id}`);
 export const editAnalysis = (id, data) => API.patch(`/analyses/${id}`, data);
 export const confirmSummary = (id, data) => API.post(`/analyses/${id}/confirm`, data);
-export const analyzeExisting = (id) => API.post(`/analyses/${id}/analyze`);
+export const analyzeExisting = (id) => API.post(`/analyses/${id}/analyze`, {}, { timeout: 60000 });
 
 // Tasks
 export const getTasks = (params) => API.get('/tasks', { params });
@@ -70,6 +70,7 @@ export const uploadMeetingFile = (formData) => API.post('/upload', formData, {
   headers: {
     'Content-Type': 'multipart/form-data',
   },
+  timeout: 30000, // 30 seconds for file upload
 });
 
 export default API;

@@ -53,7 +53,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
 
     // Create analysis record
     const analysis = new Analysis({
-      userId: req.user.id,
+      userId: req.user._id,
       rawText: extractedText,
       file: {
         storedName: fileInfo.filename,
@@ -104,7 +104,7 @@ router.get('/progress/:analysisId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Analysis not found' });
     }
 
-    if (analysis.userId.toString() !== req.user.id) {
+    if (analysis.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
@@ -129,7 +129,7 @@ router.delete('/:analysisId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Analysis not found' });
     }
 
-    if (analysis.userId.toString() !== req.user.id) {
+    if (analysis.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 

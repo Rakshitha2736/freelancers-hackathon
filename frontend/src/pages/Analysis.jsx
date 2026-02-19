@@ -50,6 +50,33 @@ const Analysis = () => {
       }
     };
     fetchAnalysis();
+
+    // Poll every 3 seconds if analysis is still processing
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await getAnalysis(id);
+        const data = res.data.analysis || res.data;
+        
+        // Only update if we actually have results now
+        if (data.summary || data.tasks?.length > 0) {
+          setSummary(data.summary || '');
+          setDecisions(data.decisions || []);
+          setTasks(
+            (data.tasks || []).map((t) => ({
+              ...t,
+              status: t.status || 'Pending',
+              isUnassigned: !t.owner,
+            }))
+          );
+          setMetadata(data.metadata || null);
+          clearInterval(pollInterval); // Stop polling once we have results
+        }
+      } catch (err) {
+        // Silently fail - WebSocket will handle updates
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
   }, [id]);
 
   // Listen for real-time analysis updates via WebSocket
@@ -185,6 +212,9 @@ const Analysis = () => {
     );
   }
 
+  // Show processing message if analysis hasn't been generated yet
+  const isProcessing = !summary && !tasks.length && !decisions.length;
+
   return (
     <div className="page-wrapper">
       <Navbar />
@@ -200,6 +230,26 @@ const Analysis = () => {
 
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
+
+        {isProcessing && (
+          <div className="alert" style={{
+            backgroundColor: '#fef3c7',
+            borderColor: '#f59e0b',
+            color: '#92400e',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div className="spinner-sm" style={{ borderColor: '#f59e0b', borderTopColor: 'transparent' }}></div>
+            <div>
+              <strong>AI Analysis in Progress...</strong>
+              <p style={{ margin: '4px 0 0', fontSize: '14px' }}>
+                Your meeting transcript is being analyzed. This usually takes 10-30 seconds. The page will update automatically when complete.
+              </p>
+            </div>
+          </div>
+        )}
 
         {meetingMetadata && (
           <section className="analysis-section" style={{ marginBottom: '24px' }}>
@@ -226,11 +276,6 @@ const Analysis = () => {
               </div>
               <div>
                 <strong>Location:</strong> {meetingMetadata.location || 'N/A'}
-              </div>
-              <div>
-                <strong>Participants:</strong> {Array.isArray(meetingMetadata.participants) && meetingMetadata.participants.length > 0
-                  ? meetingMetadata.participants.join(', ')
-                  : 'N/A'}
               </div>
             </div>
           </section>

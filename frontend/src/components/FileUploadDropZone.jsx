@@ -71,16 +71,20 @@ const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
         throw new Error('Upload failed');
       }
 
-      await analyzeExisting(data.analysisId);
       setProgress(100);
       setUploading(false);
 
-      // Call parent callback
+      // Navigate immediately - analysis will happen in background
       onFileSelect({
         analysisId: data.analysisId,
         fileName: data.fileName,
         textLength: data.textLength,
         wordCount: data.wordCount,
+      });
+
+      // Trigger analysis in background (no await)
+      analyzeExisting(data.analysisId).catch(err => {
+        console.error('Background analysis error:', err);
       });
 
       // Reset state
