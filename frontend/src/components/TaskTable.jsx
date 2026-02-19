@@ -13,11 +13,16 @@ const isOverdue = (deadline) => {
   return new Date(deadline) < new Date();
 };
 
-const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true }) => {
+const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, currentUser = null }) => {
   const handleChange = (index, field, value) => {
     if (onUpdate) {
       onUpdate(index, field, value);
     }
+  };
+
+  const isMyTask = (task) => {
+    if (!currentUser || !task.ownerUserId) return false;
+    return task.ownerUserId.toString() === currentUser._id.toString();
   };
 
   if (!tasks || tasks.length === 0) {
@@ -47,8 +52,16 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true }) => 
         <tbody>
           {tasks.map((task, index) => {
             const overdue = isOverdue(task.deadline) && task.status !== 'Completed';
+            const myTask = isMyTask(task);
             return (
-              <tr key={task._id || index} className={overdue ? 'row-overdue' : ''}>
+              <tr 
+                key={task._id || index} 
+                className={overdue ? 'row-overdue' : ''}
+                style={{ 
+                  background: myTask ? '#eff6ff' : undefined,
+                  borderLeft: myTask ? '3px solid #3b82f6' : undefined
+                }}
+              >
                 <td className="td-num">{index + 1}</td>
                 <td>
                   {editable ? (
@@ -77,9 +90,40 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true }) => 
                       )}
                     </div>
                   ) : (
-                    <span>
-                      {task.owner || <span className="badge badge-grey">Unassigned</span>}
-                    </span>
+                    <div className="owner-display">
+                      {task.owner ? (
+                        <div className="owner-badge-container">
+                          <div className="owner-avatar">
+                            {task.owner.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="owner-info">
+                            <span className="owner-name" style={{ 
+                              fontWeight: myTask ? '600' : '500',
+                              color: myTask ? '#3b82f6' : '#1f2937'
+                            }}>
+                              {task.owner}
+                            </span>
+                            {myTask && (
+                              <span className="badge badge-blue" style={{ 
+                                fontSize: '0.65rem', 
+                                padding: '2px 6px',
+                                marginLeft: '6px'
+                              }}>
+                                YOU
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="badge badge-grey">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
+                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                          Unassigned
+                        </span>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td>

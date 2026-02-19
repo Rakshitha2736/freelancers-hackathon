@@ -394,7 +394,12 @@ const Analysis = () => {
               }}
             />
           </div>
-          <TaskTable tasks={tasks} onUpdate={handleTaskUpdate} editable={true} />
+          <TaskTable 
+            tasks={tasks} 
+            onUpdate={handleTaskUpdate} 
+            editable={true} 
+            currentUser={user}
+          />
         </section>
 
         {/* Buttons Section */}

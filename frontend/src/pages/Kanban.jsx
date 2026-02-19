@@ -231,14 +231,41 @@ const Kanban = () => {
         )}
         <div className="kanban-card-title">{task.description}</div>
         <div className="kanban-card-meta">
-          <div className="kanban-card-row">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
-            <span style={{ fontWeight: isMyTask ? '600' : '400', color: isMyTask ? '#3b82f6' : 'inherit' }}>
-              {task.owner || 'Unassigned'}
-            </span>
+          <div className="kanban-card-row" style={{ alignItems: 'center', gap: '8px' }}>
+            {task.owner ? (
+              <>
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: isMyTask ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: '600',
+                  fontSize: '0.75rem',
+                  flexShrink: 0
+                }}>
+                  {task.owner.charAt(0).toUpperCase()}
+                </div>
+                <span style={{ 
+                  fontWeight: isMyTask ? '600' : '500', 
+                  color: isMyTask ? '#3b82f6' : '#1f2937',
+                  fontSize: '0.85rem'
+                }}>
+                  {task.owner}
+                </span>
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Unassigned</span>
+              </>
+            )}
           </div>
           <div className="kanban-card-row">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

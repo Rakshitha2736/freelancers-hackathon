@@ -351,7 +351,13 @@ const Dashboard = () => {
             <p>Loading tasks...</p>
           </div>
         ) : (
-          <TaskTable tasks={tasks} onUpdate={handleTaskUpdate} editable={true} showStatus={false} />
+          <TaskTable 
+            tasks={tasks} 
+            onUpdate={handleTaskUpdate} 
+            editable={true} 
+            showStatus={false} 
+            currentUser={user}
+          />
         )}
       </main>
     </div>

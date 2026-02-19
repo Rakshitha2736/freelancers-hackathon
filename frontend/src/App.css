@@ -998,6 +998,43 @@ body {
   gap: 8px;
 }
 
+.owner-display {
+  display: flex;
+  align-items: center;
+}
+
+.owner-badge-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.owner-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.owner-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.owner-name {
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 500;
+}
+
 /* ========================================
    BADGES
    ======================================== */
