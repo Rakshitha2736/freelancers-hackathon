@@ -367,7 +367,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #e0c3fc 0%, #cbb8f0 100%);
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
   padding: 24px;
   position: relative;
   overflow: hidden;
