@@ -1,0 +1,54 @@
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 15000,
+});
+
+// Attach JWT token to every request
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Global error handler
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth
+export const signup = (data) => API.post('/auth/signup', data);
+export const login = (data) => API.post('/auth/login', data);
+export const getMe = () => API.get('/auth/me');
+
+// Analyses
+export const generateSummary = (data) => API.post('/analyses/generate', data);
+export const getAnalysis = (id) => API.get(`/analyses/${id}`);
+export const editAnalysis = (id, data) => API.patch(`/analyses/${id}`, data);
+export const confirmSummary = (id, data) => API.post(`/analyses/${id}/confirm`, data);
+
+// Tasks
+export const getTasks = (params) => API.get('/tasks', { params });
+export const updateTask = (analysisId, taskId, data) => API.patch(`/tasks/${analysisId}/${taskId}`, data);
+export const getMetrics = () => API.get('/tasks/metrics');
+
+export default API;
