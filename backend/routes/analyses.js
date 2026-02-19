@@ -123,7 +123,14 @@ ${chunkText.trim()}
   const responseText = response.text().trim();
 
   const cleaned = responseText.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned);
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseError) {
+    console.error('[processChunk] JSON parse error:', parseError);
+    console.error('[processChunk] Response text:', responseText.substring(0, 500));
+    throw new Error('Failed to parse AI response. The AI may have returned invalid JSON.');
+  }
 }
 
 // ─── POST /api/analyses/generate ────────────────────────────────────────────
@@ -328,8 +335,23 @@ router.post('/:id/analyze', auth, async (req, res) => {
 
     res.json({ message: 'Analysis generated.', analysis });
   } catch (err) {
-    console.error('Analyze error:', err);
-    res.status(500).json({ message: 'Failed to generate summary. Please try again.' });
+    console.error('[Analyze] Error occurred:', err.message);
+    console.error('[Analyze] Stack:', err.stack);
+    
+    // More specific error messages
+    if (err.message?.includes('API key')) {
+      return res.status(503).json({ message: 'AI service authentication failed. Please contact administrator.' });
+    }
+    
+    if (err.status === 429 || err.message?.includes('rate limit')) {
+      return res.status(429).json({ message: 'AI service rate limit exceeded. Please try again in a moment.' });
+    }
+    
+    if (err.message?.includes('quota') || err.message?.includes('billing')) {
+      return res.status(503).json({ message: 'AI service quota exceeded. Please contact administrator.' });
+    }
+    
+    res.status(500).json({ message: 'Failed to generate summary. Please try again.', error: err.message });
   }
 });
 

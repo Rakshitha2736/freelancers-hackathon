@@ -202,11 +202,11 @@ const styles = {
   },
   dropZoneHover: {
     backgroundColor: '#e8f0ff',
-    borderColor: '#0056b3',
+    border: '2px dashed #0056b3',
     boxShadow: '0 0 10px rgba(0, 86, 179, 0.2)',
   },
   dropZoneWithFile: {
-    borderColor: '#28a745',
+    border: '2px dashed #28a745',
     backgroundColor: '#f0fff4',
   },
   dropZoneIcon: {

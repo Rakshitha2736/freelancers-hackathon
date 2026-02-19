@@ -1,5 +1,5 @@
 // frontend/src/components/MeetingMetadataForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const MeetingMetadataForm = ({ onSubmit, onChange, initialData = null }) => {
   const safeData = initialData || {};
@@ -12,23 +12,32 @@ const MeetingMetadataForm = ({ onSubmit, onChange, initialData = null }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const isInitialMount = useRef(true);
 
-  const normalizeMetadata = (nextState) => {
+  const normalizeMetadata = (data) => {
     return {
-      ...nextState,
-      duration: parseInt(nextState.duration, 10) || 0,
+      ...data,
+      duration: parseInt(data.duration, 10) || 0,
     };
   };
 
+  // Call onChange when metadata changes (after render, not during)
+  // Skip initial mount to avoid infinite loop
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
+    if (onChange) {
+      onChange(normalizeMetadata(metadata));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metadata]); // Only depend on metadata, not onChange
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setMetadata(prev => {
-      const nextState = { ...prev, [name]: value };
-      if (onChange) {
-        onChange(normalizeMetadata(nextState));
-      }
-      return nextState;
-    });
+    setMetadata(prev => ({ ...prev, [name]: value }));
   };
 
   const meetingTypes = ['Standup', 'Planning', 'Review', 'Retrospective', '1:1', 'Other'];
