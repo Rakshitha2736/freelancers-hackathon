@@ -13,9 +13,8 @@ const Analysis = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { connected, on } = useSocket(user?._id);
+  const { connected, on, off } = useSocket(user?._id);
 
-  const [, setAnalysis] = useState(null);
   const [summary, setSummary] = useState('');
   const [decisions, setDecisions] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -27,20 +26,34 @@ const Analysis = () => {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    let pollInterval = null;
+    let pollCount = 0;
+    const maxPolls = 40; // Stop after 2 minutes (40 * 3s)
+
     const fetchAnalysis = async () => {
       try {
         const res = await getAnalysis(id);
         const data = res.data.analysis || res.data;
-        setAnalysis(data);
-        setSummary(data.summary || '');
-        setDecisions(data.decisions || []);
-        setTasks(
-          (data.tasks || []).map((t) => ({
-            ...t,
-            status: t.status || 'Pending',
-            isUnassigned: !t.owner,
-          }))
-        );
+        
+        // Load draft first if it exists
+        const draft = loadDraft(id);
+        if (draft && draft.summary && !data.summary) {
+          // Use draft if API data isn't ready yet
+          setSummary(draft.summary || '');
+          setDecisions(draft.decisions || []);
+          setTasks(draft.tasks || []);
+        } else {
+          setSummary(data.summary || '');
+          setDecisions(data.decisions || []);
+          setTasks(
+            (data.tasks || []).map((t) => ({
+              ...t,
+              status: t.status || 'Pending',
+              isUnassigned: !t.owner,
+            }))
+          );
+        }
+        
         setMetadata(data.metadata || null);
         setMeetingMetadata(data.meetingMetadata || null);
       } catch (err) {
@@ -52,7 +65,15 @@ const Analysis = () => {
     fetchAnalysis();
 
     // Poll every 3 seconds if analysis is still processing
-    const pollInterval = setInterval(async () => {
+    pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      // Stop polling after max attempts
+      if (pollCount >= maxPolls) {
+        clearInterval(pollInterval);
+        return;
+      }
+
       try {
         const res = await getAnalysis(id);
         const data = res.data.analysis || res.data;
@@ -72,11 +93,18 @@ const Analysis = () => {
           clearInterval(pollInterval); // Stop polling once we have results
         }
       } catch (err) {
-        // Silently fail - WebSocket will handle updates
+        // If error persists, stop polling after 3 failures
+        if (pollCount % 10 === 0) {
+          console.error('Polling error:', err);
+        }
       }
     }, 3000);
 
-    return () => clearInterval(pollInterval);
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
   }, [id]);
 
   // Listen for real-time analysis updates via WebSocket
@@ -84,7 +112,7 @@ const Analysis = () => {
     if (!connected) return;
 
     const handleAnalysisUpdate = (data) => {
-      // Update state if this analysis receives updates from other users
+      // Update state if this analysis receives updates
       if (data._id === id) {
         setSummary(data.summary || '');
         setDecisions(data.decisions || []);
@@ -96,34 +124,30 @@ const Analysis = () => {
           })) : prev
         );
         setMetadata(data.metadata || null);
-        setMeetingMetadata(data.meetingMetadata || null);
+        if (data.meetingMetadata) {
+          setMeetingMetadata(data.meetingMetadata);
+        }
       }
     };
 
     on('analysis:updated', handleAnalysisUpdate);
 
     return () => {
-      // Cleanup handled by useSocket hook
+      off('analysis:updated', handleAnalysisUpdate);
     };
-  }, [connected, on, id]);
+  }, [connected, on, off, id]);
 
-  // Auto-save draft every 30 seconds
+  // Auto-save draft only when content changes
   useEffect(() => {
+    // Don't save on initial load
+    if (!summary && !decisions.length && !tasks.length) return;
+
     const interval = setInterval(() => {
       saveDraft(id, { summary, decisions, tasks });
     }, 30000);
 
     return () => clearInterval(interval);
   }, [id, summary, decisions, tasks]);
-
-  // Check for saved draft on component mount
-  useEffect(() => {
-    const draft = loadDraft(id);
-    if (draft && draft.summary) {
-      setSuccess('Draft recovered from last session. Changes not saved yet.');
-      setTimeout(() => setSuccess(''), 4000);
-    }
-  }, [id]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -179,14 +203,32 @@ const Analysis = () => {
   };
 
   const handleConfirm = async () => {
+    // Validation before confirm
+    if (!summary || summary.trim().length < 10) {
+      setError('Summary must be at least 10 characters long.');
+      return;
+    }
+
+    // Filter out empty decisions
+    const validDecisions = decisions.filter(d => d && d.trim().length > 0);
+    
+    // Warn if all tasks are unassigned
+    const unassignedCount = tasks.filter(t => !t.owner || t.owner.trim() === '').length;
+    if (unassignedCount > 0 && unassignedCount === tasks.length && tasks.length > 0) {
+      if (!window.confirm(`All ${tasks.length} tasks are unassigned. Are you sure you want to confirm?`)) {
+        return;
+      }
+    }
+
     setConfirming(true);
     setError('');
     try {
       await confirmSummary(id, {
-        summary,
-        decisions,
+        summary: summary.trim(),
+        decisions: validDecisions,
         tasks,
       });
+      deleteDraft(id); // Clear draft after successful confirm
       setSuccess('Summary confirmed successfully!');
       setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {

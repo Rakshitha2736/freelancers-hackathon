@@ -19,10 +19,19 @@ const Kanban = () => {
   }, []);
 
   const normalizeStatusKey = (status) => {
-    const normalized = (status || 'Pending').toString().toLowerCase().replace(/\s+/g, '');
-    if (normalized === 'inprogress') return 'inProgress';
-    if (normalized === 'completed') return 'completed';
+    // Backend sends: 'Pending', 'In Progress', 'Completed'
+    // Frontend uses: 'pending', 'inProgress', 'completed'
+    const statusStr = (status || 'Pending').toString();
+    if (statusStr === 'In Progress') return 'inProgress';
+    if (statusStr === 'Completed') return 'completed';
     return 'pending';
+  };
+
+  const denormalizeStatus = (statusKey) => {
+    // Convert frontend keys back to backend values
+    if (statusKey === 'inProgress') return 'In Progress';
+    if (statusKey === 'completed') return 'Completed';
+    return 'Pending';
   };
 
   // Listen for real-time task updates via WebSocket
@@ -107,34 +116,49 @@ const Kanban = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  const handleDragEnd = (e) => {
+    setDraggedTask(null);
+  };
+
   const handleDrop = async (e, newStatus) => {
     e.preventDefault();
     
     if (!draggedTask) return;
     
-    if (draggedTask.status === newStatus) return;
+    if (draggedTask.status === newStatus) {
+      setDraggedTask(null);
+      return;
+    }
+
+    const oldStatus = draggedTask.status;
+    const oldStatusKey = normalizeStatusKey(oldStatus);
+    const newStatusKey = normalizeStatusKey(newStatus);
+
+    // Optimistic update
+    setTasks(prev => ({
+      ...prev,
+      [oldStatusKey]: prev[oldStatusKey].filter(t => t._id !== draggedTask._id),
+      [newStatusKey]: [...prev[newStatusKey], { ...draggedTask, status: newStatus }]
+    }));
+
+    setDraggedTask(null);
 
     try {
       // Update task status in backend
       await updateTask(draggedTask.analysisId, draggedTask._id, { status: newStatus });
-      
-      // Update local state
-      setTasks(prev => {
-        const oldStatusKey = normalizeStatusKey(draggedTask.status);
-        const finalNewKey = normalizeStatusKey(newStatus);
-        
-        return {
-          ...prev,
-          [oldStatusKey]: prev[oldStatusKey].filter(t => t._id !== draggedTask._id),
-          [finalNewKey]: [...prev[finalNewKey], { ...draggedTask, status: newStatus }]
-        };
-      });
     } catch (err) {
       console.error('Failed to update task:', err);
-      setError('Failed to update task status. Please try again.');
+      setError('Failed to update task. Rolling back...');
+      
+      // Rollback on error
+      setTasks(prev => ({
+        ...prev,
+        [newStatusKey]: prev[newStatusKey].filter(t => t._id !== draggedTask._id),
+        [oldStatusKey]: [...prev[oldStatusKey], { ...draggedTask, status: oldStatus }]
+      }));
+      
+      setTimeout(() => setError(''), 5000);
     }
-    
-    setDraggedTask(null);
   };
 
   const formatDate = (date) => {
@@ -167,6 +191,7 @@ const Kanban = () => {
       className="kanban-card"
       draggable
       onDragStart={(e) => handleDragStart(e, task)}
+      onDragEnd={handleDragEnd}
     >
       <div className="kanban-card-title">{task.description}</div>
       <div className="kanban-card-meta">

@@ -22,15 +22,22 @@ const Summarize = () => {
   const handleSubmit = async () => {
     setError('');
 
-    if (!text.trim()) {
+    const trimmedText = text.trim();
+    
+    if (!trimmedText) {
       setError('Please enter meeting text or upload a file.');
+      return;
+    }
+
+    if (trimmedText.length < 50) {
+      setError('Meeting text must be at least 50 characters long.');
       return;
     }
 
     setLoading(true);
     try {
       const payload = {
-        rawText: text.trim(),
+        rawText: trimmedText,
       };
 
       // Include metadata if provided
