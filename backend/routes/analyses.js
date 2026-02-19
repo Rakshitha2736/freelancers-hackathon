@@ -1,14 +1,18 @@
 const express = require('express');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const auth = require('../middleware/auth');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
 
 const router = express.Router();
 
-const anthropic = new Anthropic.default({
-  apiKey: process.env.CLAUDE_API_KEY,
-});
+// Initialize Gemini client with validation
+if (!process.env.GEMINI_API_KEY) {
+  console.warn('Warning: GEMINI_API_KEY is not set. AI features will not work.');
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 // ─── Owner Mapping Helper ───────────────────────────────────────────────────
 async function mapOwner(ownerName) {
@@ -40,10 +44,18 @@ async function mapTasksOwners(tasks) {
 router.post('/generate', auth, async (req, res) => {
   try {
     const { rawText } = req.body;
+    console.log('[Generate] Request received, rawText length:', rawText?.length);
 
     if (!rawText || rawText.trim().length < 50) {
       return res.status(400).json({ message: 'Meeting text must be at least 50 characters.' });
     }
+
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[Generate] GEMINI_API_KEY is not set');
+      return res.status(500).json({ message: 'AI service is not configured. Please contact administrator.' });
+    }
+
+    console.log('[Generate] Calling Gemini API...');
 
     const prompt = `Analyze the following meeting transcript and return a JSON object with exactly this structure (no markdown, no code fences, only valid JSON):
 
@@ -73,13 +85,11 @@ Meeting Transcript:
 ${rawText.trim()}
 """`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
 
-    const responseText = message.content[0].text.trim();
+    console.log('[Generate] API response received');
+    const responseText = response.text().trim();
 
     let parsed;
     try {
@@ -114,10 +124,20 @@ ${rawText.trim()}
 
     res.status(201).json({ id: analysis._id, analysis });
   } catch (err) {
-    console.error('Generate error:', err);
-    if (err.status === 401) {
-      return res.status(500).json({ message: 'AI API authentication failed. Check API key.' });
+    console.error('[Generate] Error occurred:', err.message);
+    console.error('[Generate] Error stack:', err.stack);
+    console.error('[Generate] Error status:', err.status);
+    console.error('[Generate] Error type:', err.type);
+    console.error('[Generate] Full error:', JSON.stringify(err, null, 2));
+    
+    if (err.status === 401 || err.message?.includes('authentication')) {
+      return res.status(500).json({ message: 'AI API authentication failed. Please check API key configuration.' });
     }
+    
+    if (err.status === 429) {
+      return res.status(429).json({ message: 'Rate limit exceeded. Please try again in a moment.' });
+    }
+    
     res.status(500).json({ message: 'Failed to generate summary. Please try again.' });
   }
 });

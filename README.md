@@ -1,4 +1,94 @@
-# Getting Started with Create React App
+# Freelancers Hackathon Application
+
+A full-stack web application for freelancers built with React and Node.js/Express, featuring task management, analysis tools, and AI-powered insights.
+
+## Prerequisites
+
+- Node.js (v14 or higher)
+- MongoDB (local installation or MongoDB Atlas connection)
+- npm or yarn
+
+## Project Setup
+
+### 1. Install Dependencies
+
+Install frontend dependencies:
+```bash
+npm install
+```
+
+Install backend dependencies:
+```bash
+cd backend
+npm install
+```
+
+### 2. Configure Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+Edit the `.env` file with your configuration:
+```
+MONGO_URI=mongodb://localhost:27017/freelancers_hackathon
+JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+PORT=3001
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+**Get a free Gemini API key**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey) to get your free API key.
+
+**Note**: If you don't have MongoDB installed locally, you can use [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) for a free cloud database and update the `MONGO_URI` accordingly.
+
+### 3. Start the Application
+
+Start the backend server:
+```bash
+cd backend
+npm start
+```
+
+In a separate terminal, start the frontend:
+```bash
+npm start
+```
+
+The frontend will be available at [http://localhost:3000](http://localhost:3000) and the backend API at [http://localhost:3001](http://localhost:3001).
+
+## Project Structure
+
+```
+freelancers-hackathon/
+├── backend/              # Express.js backend server
+│   ├── config/          # Database configuration
+│   ├── middleware/      # Authentication middleware
+│   ├── models/          # MongoDB models
+│   ├── routes/          # API routes
+│   └── server.js        # Server entry point
+├── src/                 # React frontend
+│   ├── components/      # Reusable components
+│   ├── context/         # React context providers
+│   ├── pages/           # Page components
+│   └── services/        # API service layer
+└── public/              # Static assets
+```
+
+## Features
+
+- User authentication (signup/login)
+- Task management dashboard
+- Data analysis tools
+- AI-powered summarization
+- Protected routes
+- RESTful API
+
+---
+
+# Original Create React App Documentation
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
