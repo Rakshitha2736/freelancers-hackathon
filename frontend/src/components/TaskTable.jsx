@@ -53,6 +53,8 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
           {tasks.map((task, index) => {
             const overdue = isOverdue(task.deadline) && task.status !== 'Completed';
             const myTask = isMyTask(task);
+            const ownerName = typeof task.owner === 'string' ? task.owner.trim() : task.owner;
+            const hasOwner = Boolean(ownerName);
             return (
               <tr 
                 key={task._id || index} 
@@ -81,20 +83,20 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                         onChange={(e) => handleChange(index, 'owner', e.target.value)}
                         placeholder="Assign owner..."
                       />
-                      {(!task.owner || task.isUnassigned) && (
+                      {!hasOwner && (
                         <span className="badge badge-grey">Unassigned</span>
                       )}
                     </div>
                   ) : (
                     <div className="owner-display">
-                      {task.owner ? (
+                      {hasOwner ? (
                         <div className="owner-badge-container">
                           <div className="owner-avatar">
-                            {task.owner.charAt(0).toUpperCase()}
+                            {ownerName.charAt(0).toUpperCase()}
                           </div>
                           <div className="owner-info">
                             <span className={`owner-name ${myTask ? 'owner-name-my-task' : ''}`.trim()}>
-                              {task.owner}
+                              {ownerName}
                             </span>
                             {myTask && (
                               <span className="badge badge-blue" style={{ 
