@@ -14,9 +14,9 @@ const isOverdue = (deadline) => {
 };
 
 const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, currentUser = null }) => {
-  const handleChange = (index, field, value) => {
+  const handleChange = (task, index, field, value) => {
     if (onUpdate) {
-      onUpdate(index, field, value);
+      onUpdate(task, field, value, index);
     }
   };
 
@@ -65,7 +65,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                       type="text"
                       className="inline-input"
                       value={task.description || ''}
-                      onChange={(e) => handleChange(index, 'description', e.target.value)}
+                      onChange={(e) => handleChange(task, index, 'description', e.target.value)}
                     />
                   ) : (
                     <span className="task-desc">{task.description}</span>
@@ -78,7 +78,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                         type="text"
                         className="inline-input"
                         value={task.owner || ''}
-                        onChange={(e) => handleChange(index, 'owner', e.target.value)}
+                        onChange={(e) => handleChange(task, index, 'owner', e.target.value)}
                         placeholder="Assign owner..."
                       />
                       {(!task.owner || task.isUnassigned) && (
@@ -125,7 +125,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                       type="date"
                       className="inline-input"
                       value={task.deadline ? task.deadline.substring(0, 10) : ''}
-                      onChange={(e) => handleChange(index, 'deadline', e.target.value)}
+                      onChange={(e) => handleChange(task, index, 'deadline', e.target.value)}
                     />
                   ) : (
                     <span className={overdue ? 'deadline-overdue' : ''}>
@@ -141,7 +141,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                     <select
                       className="inline-select"
                       value={task.priority || 'Medium'}
-                      onChange={(e) => handleChange(index, 'priority', e.target.value)}
+                      onChange={(e) => handleChange(task, index, 'priority', e.target.value)}
                     >
                       <option value="High">High</option>
                       <option value="Medium">Medium</option>
@@ -159,7 +159,7 @@ const TaskTable = ({ tasks, onUpdate, editable = false, showStatus = true, curre
                       <select
                         className="inline-select"
                         value={task.status || 'Pending'}
-                        onChange={(e) => handleChange(index, 'status', e.target.value)}
+                        onChange={(e) => handleChange(task, index, 'status', e.target.value)}
                       >
                         {statusOptions.map((s) => (
                           <option key={s} value={s}>{s}</option>

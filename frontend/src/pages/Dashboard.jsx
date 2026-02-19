@@ -24,6 +24,7 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [filteredTasks, setFilteredTasks] = useState([]);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -44,8 +45,7 @@ const Dashboard = () => {
       if (filters.priority) params.priority = filters.priority;
       if (filters.myTasksOnly) params.mine = true;
       if (filters.meetingType) params.meetingType = filters.meetingType;
-      if (filters.dateFrom) params.dateFrom = filters.dateFrom;
-      if (filters.dateTo) params.dateTo = filters.dateTo;
+      // Date filters are handled client-side based on task deadlines.
 
       const [tasksRes, metricsRes] = await Promise.all([
         getTasks(params),
@@ -64,6 +64,92 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const parseDateInput = (value, { endOfDay } = {}) => {
+    if (!value || typeof value !== 'string') return null;
+    const parts = value.split('-');
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts.map(Number);
+    if (!year || !month || !day) return null;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return null;
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return null;
+    }
+    if (endOfDay) {
+      date.setHours(23, 59, 59, 999);
+    } else {
+      date.setHours(0, 0, 0, 0);
+    }
+    return date;
+  };
+
+  const parseDeadlineDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const ddmmyyyyMatch = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (ddmmyyyyMatch) {
+      const day = Number(ddmmyyyyMatch[1]);
+      const month = Number(ddmmyyyyMatch[2]);
+      const year = Number(ddmmyyyyMatch[3]);
+      const date = new Date(year, month - 1, day);
+      if (
+        date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day
+      ) {
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }
+      return null;
+    }
+
+    const yyyymmddMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (yyyymmddMatch) {
+      const year = Number(yyyymmddMatch[1]);
+      const month = Number(yyyymmddMatch[2]);
+      const day = Number(yyyymmddMatch[3]);
+      const date = new Date(year, month - 1, day);
+      if (
+        date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day
+      ) {
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }
+      return null;
+    }
+
+    const fallback = new Date(trimmed);
+    return Number.isNaN(fallback.getTime()) ? null : fallback;
+  };
+
+  useEffect(() => {
+    const fromDate = parseDateInput(filters.dateFrom);
+    const toDate = parseDateInput(filters.dateTo, { endOfDay: true });
+
+    if (!fromDate && !toDate) {
+      setFilteredTasks(tasks);
+      return;
+    }
+
+    setFilteredTasks(
+      tasks.filter((task) => {
+        const deadlineDate = parseDeadlineDate(task.deadline);
+        if (!deadlineDate) return false;
+        if (fromDate && deadlineDate < fromDate) return false;
+        if (toDate && deadlineDate > toDate) return false;
+        return true;
+      })
+    );
+  }, [tasks, filters.dateFrom, filters.dateTo]);
 
   // Listen for real-time task updates via WebSocket
   useEffect(() => {
@@ -106,13 +192,19 @@ const Dashboard = () => {
     });
   };
 
-  const handleTaskUpdate = async (index, field, value) => {
-    const task = tasks[index];
-    if (!task._id || !task.analysisId) return;
+  const handleTaskUpdate = async (task, field, value, index) => {
+    const targetTask = task || tasks[index];
+    if (!targetTask?._id || !targetTask?.analysisId) return;
     try {
-      await updateTask(task.analysisId, task._id, { [field]: value });
+      await updateTask(targetTask.analysisId, targetTask._id, { [field]: value });
       setTasks((prev) =>
-        prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
+        prev.map((t, i) =>
+          t._id === targetTask._id
+            ? { ...t, [field]: value }
+            : i === index
+            ? { ...t, [field]: value }
+            : t
+        )
       );
     } catch {
       setError('Failed to update task.');
@@ -342,7 +434,7 @@ const Dashboard = () => {
 
         <div className="section-label">
           <h2>Tasks</h2>
-          <span className="task-count">{tasks.length} total</span>
+          <span className="task-count">{filteredTasks.length} total</span>
         </div>
 
         {loading ? (
@@ -352,7 +444,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <TaskTable 
-            tasks={tasks} 
+            tasks={filteredTasks} 
             onUpdate={handleTaskUpdate} 
             editable={true} 
             showStatus={false} 

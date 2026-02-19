@@ -148,17 +148,17 @@ const Analysis = () => {
     return () => clearInterval(interval);
   }, [id, summary, decisions, tasks]);
 
-  const handleTaskUpdate = (index, field, value) => {
+  const handleTaskUpdate = (task, field, value, index) => {
     setTasks((prev) =>
-      prev.map((t, i) =>
-        i === index
-          ? {
-              ...t,
-              [field]: value,
-              isUnassigned: field === 'owner' ? !value : t.isUnassigned,
-            }
-          : t
-      )
+      prev.map((t, i) => {
+        const isMatch = task?._id ? t._id === task._id : i === index;
+        if (!isMatch) return t;
+        return {
+          ...t,
+          [field]: value,
+          isUnassigned: field === 'owner' ? !value : t.isUnassigned,
+        };
+      })
     );
   };
 
