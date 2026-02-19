@@ -35,36 +35,28 @@ const Kanban = () => {
     return 'Pending';
   };
 
+  const removeTaskFromAllColumns = (columns, taskId) => ({
+    pending: columns.pending.filter((task) => task._id !== taskId),
+    inProgress: columns.inProgress.filter((task) => task._id !== taskId),
+    completed: columns.completed.filter((task) => task._id !== taskId),
+  });
+
+  const upsertTaskInColumn = (columns, task, targetStatusKey) => {
+    const withoutTask = removeTaskFromAllColumns(columns, task._id);
+    return {
+      ...withoutTask,
+      [targetStatusKey]: [...withoutTask[targetStatusKey], task],
+    };
+  };
+
   // Listen for real-time task updates via WebSocket
   useEffect(() => {
     if (!connected) return;
 
     const handleTaskUpdate = (data) => {
       setTasks((prev) => {
-        const foundInPending = prev.pending.find(t => t._id === data._id);
-        const foundInProgress = prev.inProgress.find(t => t._id === data._id);
-        const foundInCompleted = prev.completed.find(t => t._id === data._id);
-        const oldStatus = foundInPending
-          ? 'pending'
-          : foundInProgress
-          ? 'inProgress'
-          : foundInCompleted
-          ? 'completed'
-          : null;
         const newStatusKey = normalizeStatusKey(data.status);
-
-        if (!oldStatus) {
-          return {
-            ...prev,
-            [newStatusKey]: [...prev[newStatusKey], { ...data }]
-          };
-        }
-
-        return {
-          ...prev,
-          [oldStatus]: prev[oldStatus].filter(t => t._id !== data._id),
-          [newStatusKey]: [...prev[newStatusKey], { ...data }]
-        };
+        return upsertTaskInColumn(prev, { ...data }, newStatusKey);
       });
     };
 
@@ -147,13 +139,10 @@ const Kanban = () => {
     const oldStatus = draggedTask.status;
     const oldStatusKey = normalizeStatusKey(oldStatus);
     const newStatusKey = normalizeStatusKey(newStatus);
+    const optimisticTask = { ...draggedTask, status: newStatus };
 
     // Optimistic update
-    setTasks(prev => ({
-      ...prev,
-      [oldStatusKey]: prev[oldStatusKey].filter(t => t._id !== draggedTask._id),
-      [newStatusKey]: [...prev[newStatusKey], { ...draggedTask, status: newStatus }]
-    }));
+    setTasks((prev) => upsertTaskInColumn(prev, optimisticTask, newStatusKey));
 
     setDraggedTask(null);
 
@@ -165,11 +154,7 @@ const Kanban = () => {
       setError('Failed to update task. Rolling back...');
       
       // Rollback on error
-      setTasks(prev => ({
-        ...prev,
-        [newStatusKey]: prev[newStatusKey].filter(t => t._id !== draggedTask._id),
-        [oldStatusKey]: [...prev[oldStatusKey], { ...draggedTask, status: oldStatus }]
-      }));
+      setTasks((prev) => upsertTaskInColumn(prev, { ...draggedTask, status: oldStatus }, oldStatusKey));
       
       setTimeout(() => setError(''), 5000);
     }
