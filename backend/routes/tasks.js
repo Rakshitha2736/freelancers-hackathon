@@ -2,6 +2,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
+const { emitTaskUpdate } = require('../socket');
 
 const router = express.Router();
 
@@ -143,6 +144,20 @@ router.patch('/:analysisId/:taskId', auth, async (req, res) => {
     }
 
     await analysis.save();
+    
+    // Emit task update via WebSocket
+    emitTaskUpdate(req.user._id.toString(), {
+      _id: task._id,
+      analysisId: analysis._id,
+      description: task.description,
+      owner: task.owner,
+      ownerUserId: task.ownerUserId,
+      deadline: task.deadline,
+      priority: task.priority,
+      status: task.status,
+      confidence: task.confidence
+    });
+
     res.json({ message: 'Task updated.', task });
   } catch (err) {
     console.error('Update task error:', err);

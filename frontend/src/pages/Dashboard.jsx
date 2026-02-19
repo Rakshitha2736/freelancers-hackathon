@@ -4,11 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import MetricsCards from '../components/MetricsCards';
 import TaskTable from '../components/TaskTable';
-import { getTasks, getMetrics, updateTask } from '../services/api';
+import useSocket from '../hooks/useSocket';
+import { getTasks, getMetrics, updateTask, searchAnalyses } from '../services/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { connected, on } = useSocket(user?._id);
 
   const [tasks, setTasks] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -19,6 +21,9 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -54,6 +59,36 @@ const Dashboard = () => {
     fetchData();
   }, [fetchData]);
 
+  // Listen for real-time task updates via WebSocket
+  useEffect(() => {
+    if (!connected) return;
+
+    const handleTaskUpdate = (data) => {
+      setTasks((prev) =>
+        prev.map((task) =>
+          task._id === data._id ? { ...task, ...data } : task
+        )
+      );
+    };
+
+    const handleTaskDeleted = (taskId) => {
+      setTasks((prev) => prev.filter((task) => task._id !== taskId));
+    };
+
+    const handleAnalysisUpdate = (data) => {
+      // Refresh metrics when analysis is updated
+      fetchData();
+    };
+
+    on('task:updated', handleTaskUpdate);
+    on('task:deleted', handleTaskDeleted);
+    on('analysis:updated', handleAnalysisUpdate);
+
+    return () => {
+      // Note: useSocket's off method would go here if implementing cleanup
+    };
+  }, [connected, on, fetchData]);
+
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
@@ -69,6 +104,29 @@ const Dashboard = () => {
     } catch {
       setError('Failed to update task.');
     }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const res = await searchAnalyses(searchQuery);
+      setSearchResults(res.data.results || []);
+    } catch (err) {
+      setError('Search failed.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   return (
@@ -87,6 +145,100 @@ const Dashboard = () => {
             <span className="btn-icon-left">✨</span>
             New Summarization
           </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="search-section" style={{ marginBottom: '24px' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', maxWidth: '600px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                type="text"
+                className="filter-input"
+                placeholder="🔍 Search meetings, tasks, decisions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ width: '100%', paddingRight: searchQuery ? '40px' : '12px' }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    color: '#9ca3af'
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button 
+              type="submit" 
+              className="btn btn-secondary"
+              disabled={searching || searchQuery.trim().length < 2}
+            >
+              {searching ? 'Searching...' : 'Search'}
+            </button>
+          </form>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '12px'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
+                  Found {searchResults.length} meeting{searchResults.length !== 1 ? 's' : ''}
+                </h3>
+                <button onClick={clearSearch} className="btn btn-sm btn-outline">
+                  Close Results
+                </button>
+              </div>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {searchResults.map(result => (
+                  <div 
+                    key={result._id}
+                    onClick={() => navigate(`/analysis/${result._id}`)}
+                    style={{
+                      background: 'white',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      border: '1px solid #e5e7eb',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ fontSize: '0.9rem', color: '#1f2937', marginBottom: '8px' }}>
+                      {result.summary}
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#64748b' }}>
+                      <span>📅 {new Date(result.confirmedAt).toLocaleDateString()}</span>
+                      <span>✅ {result.matchedTasks}/{result.totalTasks} tasks</span>
+                      <span>💡 {result.matchedDecisions}/{result.totalDecisions} decisions</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <MetricsCards metrics={metrics} />

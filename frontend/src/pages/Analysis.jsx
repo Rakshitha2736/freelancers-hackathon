@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import useSocket from '../hooks/useSocket';
 import TaskTable from '../components/TaskTable';
+import { TaskTemplateSelector } from '../components/TaskTemplateSelector';
 import { getAnalysis, confirmSummary } from '../services/api';
+import { exportToJSON, exportToCSV, exportToMarkdown, saveDraft, loadDraft, deleteDraft } from '../utils/exportUtils';
+import { useKeyboardShortcuts } from '../utils/shortcuts';
 
 const Analysis = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { connected, on } = useSocket(user?._id);
 
   const [, setAnalysis] = useState(null);
   const [summary, setSummary] = useState('');
   const [decisions, setDecisions] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +40,7 @@ const Analysis = () => {
             isUnassigned: !t.owner,
           }))
         );
+        setMetadata(data.metadata || null);
       } catch (err) {
         setError('Failed to load analysis.');
       } finally {
@@ -40,6 +49,76 @@ const Analysis = () => {
     };
     fetchAnalysis();
   }, [id]);
+
+  // Listen for real-time analysis updates via WebSocket
+  useEffect(() => {
+    if (!connected) return;
+
+    const handleAnalysisUpdate = (data) => {
+      // Update state if this analysis receives updates from other users
+      if (data._id === id) {
+        setSummary(data.summary || '');
+        setDecisions(data.decisions || []);
+        setTasks((prev) =>
+          data.tasks ? data.tasks.map(t => ({
+            ...t,
+            status: t.status || 'Pending',
+            isUnassigned: !t.owner
+          })) : prev
+        );
+        setMetadata(data.metadata || null);
+      }
+    };
+
+    on('analysis:updated', handleAnalysisUpdate);
+
+    return () => {
+      // Cleanup handled by useSocket hook
+    };
+  }, [connected, on, id]);
+
+  // Auto-save draft every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      saveDraft(id, { summary, decisions, tasks });
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [id, summary, decisions, tasks]);
+
+  // Check for saved draft on component mount
+  useEffect(() => {
+    const draft = loadDraft(id);
+    if (draft && draft.summary) {
+      setSuccess('Draft recovered from last session. Changes not saved yet.');
+      setTimeout(() => setSuccess(''), 4000);
+    }
+  }, [id]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    SAVE_DRAFT: () => {
+      saveDraft(id, { summary, decisions, tasks });
+      setSuccess('Draft saved!');
+      setTimeout(() => setSuccess(''), 2000);
+    },
+    EXPORT_JSON: () => {
+      exportToJSON({ summary, decisions, tasks, metadata }, `analysis-${id}.json`);
+    },
+    EXPORT_CSV: () => {
+      exportToCSV({ summary, decisions, tasks, metadata }, `analysis-${id}.csv`);
+    },
+    NEW_TASK: () => {
+      const newTask = {
+        description: '',
+        owner: '',
+        deadline: '',
+        priority: 'Medium',
+        status: 'Pending'
+      };
+      setTasks(prev => [...prev, newTask]);
+    }
+  });
 
   const handleTaskUpdate = (index, field, value) => {
     setTasks((prev) =>
@@ -119,6 +198,28 @@ const Analysis = () => {
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
+        {/* Processing Metadata Info */}
+        {metadata && metadata.chunked && (
+          <div className="alert" style={{ 
+            backgroundColor: '#eff6ff', 
+            borderColor: '#3b82f6',
+            color: '#1e40af',
+            marginBottom: '24px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              <strong>Large Document Processing:</strong> 
+              <span>
+                This {metadata.wordCount?.toLocaleString() || 0}-word meeting transcript was processed in {metadata.totalChunks} chunks for optimal analysis.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Executive Summary */}
         <section className="analysis-section">
           <div className="section-header">
@@ -188,12 +289,17 @@ const Analysis = () => {
               </svg>
               Extracted Tasks
             </h2>
+            <TaskTemplateSelector 
+              onSelect={(template) => {
+                setTasks(prev => [...prev, { ...template, status: 'Pending', confidence: 1 }]);
+              }}
+            />
           </div>
           <TaskTable tasks={tasks} onUpdate={handleTaskUpdate} editable={true} />
         </section>
 
-        {/* Confirm Button */}
-        <div className="confirm-section">
+        {/* Buttons Section */}
+        <div className="confirm-section" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             className="btn btn-primary btn-lg btn-glow"
             onClick={handleConfirm}
@@ -205,6 +311,40 @@ const Analysis = () => {
               <><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round"/></svg> Confirm &amp; Save</>
             )}
           </button>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => exportToJSON({ summary, decisions, tasks, metadata }, `analysis-${id}.json`)}
+              title="Ctrl+Shift+E"
+            >
+              📄 JSON
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => exportToCSV({ summary, decisions, tasks, metadata }, `analysis-${id}.csv`)}
+              title="Ctrl+Shift+C"
+            >
+              📊 CSV
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => exportToMarkdown({ summary, decisions, tasks, metadata }, `analysis-${id}.md`)}
+            >
+              📝 Markdown
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                saveDraft(id, { summary, decisions, tasks });
+                setSuccess('Draft saved! (Ctrl+S)');
+                setTimeout(() => setSuccess(''), 2000);
+              }}
+              title="Ctrl+S"
+            >
+              💾 Save Draft
+            </button>
+          </div>
         </div>
       </main>
     </div>

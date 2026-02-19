@@ -9,6 +9,7 @@ const taskSchema = new mongoose.Schema({
   status: { type: String, enum: ['Pending', 'In Progress', 'Completed'], default: 'Pending' },
   confidence: { type: Number, default: null },
   isUnassigned: { type: Boolean, default: true },
+  fromChunk: { type: Number, default: undefined }, // Which chunk this task came from (if chunked)
 });
 
 const analysisSchema = new mongoose.Schema(
@@ -24,6 +25,13 @@ const analysisSchema = new mongoose.Schema(
     tasks: [taskSchema],
     isConfirmed: { type: Boolean, default: false },
     confirmedAt: { type: Date, default: null },
+    metadata: {
+      chunked: { type: Boolean, default: false },
+      totalChunks: { type: Number, default: 1 },
+      processedAt: { type: Date, default: null },
+      textLength: { type: Number, default: 0 },
+      wordCount: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

@@ -51,4 +51,12 @@ export const getTasks = (params) => API.get('/tasks', { params });
 export const updateTask = (analysisId, taskId, data) => API.patch(`/tasks/${analysisId}/${taskId}`, data);
 export const getMetrics = () => API.get('/tasks/metrics');
 
+// Analytics
+export const getAnalyticsOverview = () => API.get('/analytics/overview');
+export const getAnalyticsTrends = (days = 30) => API.get('/analytics/trends', { params: { days } });
+export const getTeamPerformance = () => API.get('/analytics/team-performance');
+
+// Search
+export const searchAnalyses = (query) => API.get('/analyses/search', { params: { q: query } });
+
 export default API;

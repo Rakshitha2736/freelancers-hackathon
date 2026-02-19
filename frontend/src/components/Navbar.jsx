@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { isDark, setIsDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -49,6 +52,24 @@ const Navbar = () => {
             Dashboard
           </Link>
           <Link
+            to="/kanban"
+            className={`nav-link ${isActive('/kanban') ? 'active' : ''}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm2 1v2h3V3H2zm4 0v2h3V3H6zm4 0v2h3V3h-3zM2 7v2h3V7H2zm4 0v2h3V7H6zm4 0v2h3V7h-3z"/>
+            </svg>
+            Kanban
+          </Link>
+          <Link
+            to="/analytics"
+            className={`nav-link ${isActive('/analytics') ? 'active' : ''}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M0 0h1v15h15v1H0V0zm14.817 11.887a.5.5 0 00.07-.704l-4.5-5.5a.5.5 0 00-.74-.037L7 8.5 4 5.5 3.5 6l3.5 3.5 3.354-3.354 4.146 5.037a.5.5 0 00.704.07z"/>
+            </svg>
+            Analytics
+          </Link>
+          <Link
             to="/summarize"
             className={`nav-link ${isActive('/summarize') ? 'active' : ''}`}
           >
@@ -60,6 +81,15 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-right">
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setIsDark(!isDark)}
+            title={isDark ? 'Light mode' : 'Dark mode'}
+            style={{ marginRight: '12px' }}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+          <KeyboardShortcutsHelp />
           <div className="navbar-avatar">{getInitials(user?.name)}</div>
           <span className="navbar-user">{user?.name || user?.email || 'User'}</span>
           <button className="btn btn-outline btn-sm" onClick={handleLogout}>

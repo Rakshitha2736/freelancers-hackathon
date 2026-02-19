@@ -11,6 +11,12 @@ const Summarize = () => {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
+  // Calculate if text will be chunked
+  const textLength = text.trim().length;
+  const wordCount = text.trim().split(/\s+/).filter(w => w).length;
+  const willBeChunked = textLength > 15000;
+  const estimatedChunks = willBeChunked ? Math.ceil(textLength / 15000) : 1;
+
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
     if (selected) {
@@ -80,9 +86,29 @@ const Summarize = () => {
               rows={14}
               disabled={loading}
             />
-            {text.trim() && (
-              <span className="char-count">{text.trim().split(/\s+/).length} words</span>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+              {text.trim() && (
+                <span className="char-count">
+                  {wordCount} words · {textLength.toLocaleString()} characters
+                </span>
+              )}
+              {willBeChunked && (
+                <span className="char-count" style={{ 
+                  color: '#3b82f6', 
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                  </svg>
+                  Will be processed in {estimatedChunks} chunks for optimal results
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="upload-area" onClick={() => !loading && fileInputRef.current?.click()}>
@@ -110,7 +136,10 @@ const Summarize = () => {
           >
             {loading ? (
               <>
-                <span className="spinner-sm" /> Analyzing with AI...
+                <span className="spinner-sm" /> 
+                {willBeChunked 
+                  ? `Analyzing ${estimatedChunks} chunks with AI...` 
+                  : 'Analyzing with AI...'}
               </>
             ) : (
               <>
