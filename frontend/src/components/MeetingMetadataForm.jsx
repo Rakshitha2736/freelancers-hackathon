@@ -1,14 +1,19 @@
 // frontend/src/components/MeetingMetadataForm.jsx
 import React, { useState } from 'react';
 
-const MeetingMetadataForm = ({ onSubmit, initialData = {} }) => {
+const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
+  const safeData = initialData || {};
+  const participantsValue = Array.isArray(safeData.participants)
+    ? safeData.participants.join(', ')
+    : '';
+
   const [metadata, setMetadata] = useState({
-    title: initialData.title || '',
-    date: initialData.date || new Date().toISOString().split('T')[0],
-    participants: initialData.participants?.join(', ') || '',
-    meetingType: initialData.meetingType || 'Other',
-    location: initialData.location || '',
-    duration: initialData.duration || 0,
+    title: safeData.title || '',
+    date: safeData.date || new Date().toISOString().split('T')[0],
+    participants: participantsValue,
+    meetingType: safeData.meetingType || 'Other',
+    location: safeData.location || '',
+    duration: safeData.duration || 0,
   });
 
   const [errors, setErrors] = useState({});
