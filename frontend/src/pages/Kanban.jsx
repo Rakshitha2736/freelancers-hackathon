@@ -12,10 +12,18 @@ const Kanban = () => {
   const [tasks, setTasks] = useState({ pending: [], inProgress: [], completed: [] });
   const [loading, setLoading] = useState(true);
   const [draggedTask, setDraggedTask] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  const normalizeStatusKey = (status) => {
+    const normalized = (status || 'Pending').toString().toLowerCase().replace(/\s+/g, '');
+    if (normalized === 'inprogress') return 'inProgress';
+    if (normalized === 'completed') return 'completed';
+    return 'pending';
+  };
 
   // Listen for real-time task updates via WebSocket
   useEffect(() => {
@@ -23,9 +31,24 @@ const Kanban = () => {
 
     const handleTaskUpdate = (data) => {
       setTasks((prev) => {
-        const oldStatus = prev.pending.find(t => t._id === data._id) ? 'pending' :
-                          prev.inProgress.find(t => t._id === data._id) ? 'inProgress' : 'completed';
-        const newStatusKey = data.status.toLowerCase().replace(' ', '') === 'inprogress' ? 'inProgress' : data.status.toLowerCase();
+        const foundInPending = prev.pending.find(t => t._id === data._id);
+        const foundInProgress = prev.inProgress.find(t => t._id === data._id);
+        const foundInCompleted = prev.completed.find(t => t._id === data._id);
+        const oldStatus = foundInPending
+          ? 'pending'
+          : foundInProgress
+          ? 'inProgress'
+          : foundInCompleted
+          ? 'completed'
+          : null;
+        const newStatusKey = normalizeStatusKey(data.status);
+
+        if (!oldStatus) {
+          return {
+            ...prev,
+            [newStatusKey]: [...prev[newStatusKey], { ...data }]
+          };
+        }
 
         return {
           ...prev,
@@ -53,6 +76,7 @@ const Kanban = () => {
 
   const fetchTasks = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await getTasks({ isConfirmed: true });
       const allTasks = res.data.tasks || res.data || [];
@@ -67,6 +91,7 @@ const Kanban = () => {
       setTasks(grouped);
     } catch (err) {
       console.error('Failed to load tasks:', err);
+      setError('Failed to load tasks. Please refresh.');
     } finally {
       setLoading(false);
     }
@@ -95,10 +120,8 @@ const Kanban = () => {
       
       // Update local state
       setTasks(prev => {
-        const oldStatus = draggedTask.status.toLowerCase().replace(' ', '');
-        const oldStatusKey = oldStatus === 'inprogress' ? 'inProgress' : oldStatus;
-        const newStatusKey = newStatus.toLowerCase().replace(' ', '');
-        const finalNewKey = newStatusKey === 'inprogress' ? 'inProgress' : newStatusKey;
+        const oldStatusKey = normalizeStatusKey(draggedTask.status);
+        const finalNewKey = normalizeStatusKey(newStatus);
         
         return {
           ...prev,
@@ -108,6 +131,7 @@ const Kanban = () => {
       });
     } catch (err) {
       console.error('Failed to update task:', err);
+      setError('Failed to update task status. Please try again.');
     }
     
     setDraggedTask(null);
@@ -197,6 +221,8 @@ const Kanban = () => {
             </button>
           </div>
         </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         <div className="kanban-container">
           {/* Pending Column */}

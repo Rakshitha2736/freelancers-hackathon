@@ -43,6 +43,9 @@ const Dashboard = () => {
       if (filters.owner) params.owner = filters.owner;
       if (filters.priority) params.priority = filters.priority;
       if (filters.myTasksOnly) params.mine = true;
+      if (filters.meetingType) params.meetingType = filters.meetingType;
+      if (filters.dateFrom) params.dateFrom = filters.dateFrom;
+      if (filters.dateTo) params.dateTo = filters.dateTo;
 
       const [tasksRes, metricsRes] = await Promise.all([
         getTasks(params),
@@ -93,7 +96,12 @@ const Dashboard = () => {
   }, [connected, on, fetchData]);
 
   const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
+    setFilters((prev) => {
+      if (field === 'myTasksOnly' && value) {
+        return { ...prev, myTasksOnly: true, owner: '' };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleTaskUpdate = async (index, field, value) => {

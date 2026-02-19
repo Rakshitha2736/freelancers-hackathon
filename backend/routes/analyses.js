@@ -42,6 +42,48 @@ async function mapTasksOwners(tasks) {
   );
 }
 
+async function runAnalysisPipeline(trimmedText) {
+  const needsChunking = trimmedText.length > 15000;
+  const chunks = needsChunking
+    ? chunkText(trimmedText, 15000)
+    : [{ chunk: trimmedText, index: 0, totalChunks: 1 }];
+
+  const chunkResults = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const { chunk, index } = chunks[i];
+    const parsed = await processChunk(chunk, index, chunks.length);
+    chunkResults.push(parsed);
+  }
+
+  const mergedResult = chunks.length > 1
+    ? mergeChunkResults(chunkResults)
+    : chunkResults[0];
+
+  const rawTasks = (mergedResult.tasks || []).map((t, i) => ({
+    description: t.description || '',
+    owner: t.owner || '',
+    deadline: t.deadline || new Date(Date.now() + (i + 1) * 7 * 86400000).toISOString(),
+    priority: ['High', 'Medium', 'Low'].includes(t.priority) ? t.priority : 'Medium',
+    status: 'Pending',
+    confidence: typeof t.confidence === 'number' ? t.confidence : 0.7,
+    fromChunk: t.fromChunk || undefined,
+  }));
+
+  const tasksWithOwners = await mapTasksOwners(rawTasks);
+
+  return {
+    mergedResult,
+    tasksWithOwners,
+    metadata: {
+      chunked: chunks.length > 1,
+      totalChunks: chunks.length,
+      processedAt: new Date(),
+      textLength: trimmedText.length,
+      wordCount: trimmedText.split(/\s+/).length,
+    },
+  };
+}
+
 // ─── Helper: Process a single chunk with Gemini ─────────────────────────────
 async function processChunk(chunkText, chunkIndex, totalChunks) {
   const chunkContext = totalChunks > 1 
@@ -101,51 +143,7 @@ router.post('/generate', auth, async (req, res) => {
 
     const trimmedText = rawText.trim();
     
-    // Determine if chunking is needed (for texts > 15,000 characters)
-    const needsChunking = trimmedText.length > 15000;
-    const chunks = needsChunking ? chunkText(trimmedText, 15000) : [{ chunk: trimmedText, index: 0, totalChunks: 1 }];
-    
-    console.log(`[Generate] Processing ${chunks.length} chunk(s)...`);
-    if (needsChunking) {
-      console.log(`[Generate] Text chunked into ${chunks.length} parts for optimal processing`);
-    }
-
-    // Process each chunk
-    const chunkResults = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const { chunk, index } = chunks[i];
-      console.log(`[Generate] Processing chunk ${index + 1}/${chunks.length} (${chunk.length} chars)...`);
-      
-      try {
-        const parsed = await processChunk(chunk, index, chunks.length);
-        chunkResults.push(parsed);
-        console.log(`[Generate] Chunk ${index + 1} processed successfully`);
-      } catch (parseErr) {
-        console.error(`[Generate] Failed to parse chunk ${index + 1}:`, parseErr.message);
-        throw new Error(`Failed to process chunk ${index + 1}. Please try again.`);
-      }
-    }
-
-    // Merge results from all chunks
-    const mergedResult = chunks.length > 1 
-      ? mergeChunkResults(chunkResults)
-      : chunkResults[0];
-
-    console.log(`[Generate] Merged results: ${mergedResult.tasks?.length || 0} tasks, ${mergedResult.decisions?.length || 0} decisions`);
-
-    // Build tasks with defaults
-    const rawTasks = (mergedResult.tasks || []).map((t, i) => ({
-      description: t.description || '',
-      owner: t.owner || '',
-      deadline: t.deadline || new Date(Date.now() + (i + 1) * 7 * 86400000).toISOString(),
-      priority: ['High', 'Medium', 'Low'].includes(t.priority) ? t.priority : 'Medium',
-      status: 'Pending',
-      confidence: typeof t.confidence === 'number' ? t.confidence : 0.7,
-      fromChunk: t.fromChunk || undefined, // Preserve chunk reference if present
-    }));
-
-    // Map owners to real users
-    const tasksWithOwners = await mapTasksOwners(rawTasks);
+    const { mergedResult, tasksWithOwners, metadata } = await runAnalysisPipeline(trimmedText);
 
     // Create analysis with chunking metadata
     const meetingMetadata = req.body.meetingMetadata || {};
@@ -168,13 +166,7 @@ router.post('/generate', auth, async (req, res) => {
       tasks: tasksWithOwners,
       isConfirmed: false,
       meetingMetadata: parsedMeetingMetadata,
-      metadata: {
-        chunked: chunks.length > 1,
-        totalChunks: chunks.length,
-        processedAt: new Date(),
-        textLength: trimmedText.length,
-        wordCount: trimmedText.split(/\s+/).length,
-      }
+      metadata
     });
 
     console.log(`[Generate] Analysis created with ID: ${analysis._id}`);
@@ -183,8 +175,8 @@ router.post('/generate', auth, async (req, res) => {
       id: analysis._id, 
       analysis,
       processingInfo: {
-        chunked: chunks.length > 1,
-        totalChunks: chunks.length,
+        chunked: metadata.chunked,
+        totalChunks: metadata.totalChunks,
         totalTasks: tasksWithOwners.length,
         totalDecisions: mergedResult.decisions?.length || 0
       }
@@ -224,6 +216,53 @@ router.get('/:id', auth, async (req, res) => {
   } catch (err) {
     console.error('Get analysis error:', err);
     res.status(500).json({ message: 'Failed to load analysis.' });
+  }
+});
+
+// ─── POST /api/analyses/:id/analyze ────────────────────────────────────────
+router.post('/:id/analyze', auth, async (req, res) => {
+  try {
+    const analysis = await Analysis.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!analysis) {
+      return res.status(404).json({ message: 'Analysis not found.' });
+    }
+
+    if (!analysis.rawText || analysis.rawText.trim().length < 50) {
+      return res.status(400).json({ message: 'Meeting text must be at least 50 characters.' });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[Analyze] GEMINI_API_KEY is not set');
+      return res.status(503).json({ message: 'AI service is not configured. Please contact administrator.' });
+    }
+
+    const trimmedText = analysis.rawText.trim();
+    const { mergedResult, tasksWithOwners, metadata } = await runAnalysisPipeline(trimmedText);
+
+    analysis.summary = mergedResult.summary || '';
+    analysis.decisions = mergedResult.decisions || [];
+    analysis.tasks = tasksWithOwners;
+    analysis.metadata = metadata;
+    analysis.isConfirmed = false;
+
+    await analysis.save();
+
+    emitAnalysisUpdate(req.user._id.toString(), {
+      _id: analysis._id,
+      summary: analysis.summary,
+      decisions: analysis.decisions,
+      tasks: analysis.tasks,
+      metadata: analysis.metadata,
+    });
+
+    res.json({ message: 'Analysis generated.', analysis });
+  } catch (err) {
+    console.error('Analyze error:', err);
+    res.status(500).json({ message: 'Failed to generate summary. Please try again.' });
   }
 });
 

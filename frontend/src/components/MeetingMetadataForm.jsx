@@ -1,7 +1,7 @@
 // frontend/src/components/MeetingMetadataForm.jsx
 import React, { useState } from 'react';
 
-const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
+const MeetingMetadataForm = ({ onSubmit, onChange, initialData = null }) => {
   const safeData = initialData || {};
   const participantsValue = Array.isArray(safeData.participants)
     ? safeData.participants.join(', ')
@@ -18,12 +18,28 @@ const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
 
   const [errors, setErrors] = useState({});
 
+  const normalizeMetadata = (nextState) => {
+    const participantsArray = nextState.participants
+      .split(',')
+      .map(p => p.trim())
+      .filter(p => p);
+
+    return {
+      ...nextState,
+      participants: participantsArray,
+      duration: parseInt(nextState.duration, 10) || 0,
+    };
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setMetadata(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+    setMetadata(prev => {
+      const nextState = { ...prev, [name]: value };
+      if (onChange) {
+        onChange(normalizeMetadata(nextState));
+      }
+      return nextState;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -35,16 +51,7 @@ const MeetingMetadataForm = ({ onSubmit, initialData = null }) => {
       return;
     }
 
-    const participantsArray = metadata.participants
-      .split(',')
-      .map(p => p.trim())
-      .filter(p => p);
-
-    onSubmit({
-      ...metadata,
-      participants: participantsArray,
-      duration: parseInt(metadata.duration) || 0,
-    });
+    onSubmit(normalizeMetadata(metadata));
   };
 
   const meetingTypes = ['Standup', 'Planning', 'Review', 'Retrospective', '1:1', 'Other'];

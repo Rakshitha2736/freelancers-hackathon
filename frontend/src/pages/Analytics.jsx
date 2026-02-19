@@ -10,11 +10,14 @@ const Analytics = () => {
   const [timeRange, setTimeRange] = useState(30);
   
   const [overview, setOverview] = useState(null);
+  const [priorityDistribution, setPriorityDistribution] = useState(null);
   const [trends, setTrends] = useState([]);
   const [teamPerformance, setTeamPerformance] = useState([]);
+  const [error, setError] = useState('');
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const [overviewRes, trendsRes, teamRes] = await Promise.all([
         getAnalyticsOverview(),
@@ -23,10 +26,12 @@ const Analytics = () => {
       ]);
 
       setOverview(overviewRes.data.overview);
+      setPriorityDistribution(overviewRes.data.priorityDistribution || null);
       setTrends(trendsRes.data.trends);
       setTeamPerformance(teamRes.data.teamPerformance);
     } catch (err) {
       console.error('Failed to load analytics:', err);
+      setError('Failed to load analytics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -56,10 +61,10 @@ const Analytics = () => {
     { name: 'Pending', value: overview.pendingTasks, color: '#ef4444' }
   ] : [];
 
-  const priorityData = overview ? [
-    { name: 'High', value: overview.priorityDistribution?.high || 0, fill: '#ef4444' },
-    { name: 'Medium', value: overview.priorityDistribution?.medium || 0, fill: '#f59e0b' },
-    { name: 'Low', value: overview.priorityDistribution?.low || 0, fill: '#10b981' }
+  const priorityData = priorityDistribution ? [
+    { name: 'High', value: priorityDistribution.high || 0, fill: '#ef4444' },
+    { name: 'Medium', value: priorityDistribution.medium || 0, fill: '#f59e0b' },
+    { name: 'Low', value: priorityDistribution.low || 0, fill: '#10b981' }
   ] : [];
 
   return (
@@ -89,6 +94,8 @@ const Analytics = () => {
             </button>
           </div>
         </div>
+
+        {error && <div className="alert alert-error">{error}</div>}
 
         {/* Overview Cards */}
         <div className="metrics-grid" style={{ marginBottom: '32px' }}>

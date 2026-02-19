@@ -1,5 +1,6 @@
 // frontend/src/components/FileUploadDropZone.jsx
 import React, { useState, useRef } from 'react';
+import { uploadMeetingFile, analyzeExisting } from '../services/api';
 
 const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -64,19 +65,13 @@ const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
       formData.append('location', metadata.location || '');
       formData.append('duration', metadata.duration || 0);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
+      const response = await uploadMeetingFile(formData);
+      const data = response.data;
+      if (!data?.analysisId) {
         throw new Error('Upload failed');
       }
 
-      const data = await response.json();
+      await analyzeExisting(data.analysisId);
       setProgress(100);
       setUploading(false);
 

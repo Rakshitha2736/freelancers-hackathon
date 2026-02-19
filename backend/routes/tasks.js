@@ -26,12 +26,24 @@ async function mapOwner(ownerName) {
 // ─── GET /api/tasks ─────────────────────────────────────────────────────────
 router.get('/', auth, async (req, res) => {
   try {
-    const { mine, myTasksOnly, owner, priority, status } = req.query;
+    const { mine, myTasksOnly, owner, priority, status, meetingType, dateFrom, dateTo } = req.query;
 
-    const analyses = await Analysis.find({
+    const analysisQuery = {
       userId: req.user._id,
       isConfirmed: true,
-    });
+    };
+
+    if (meetingType) {
+      analysisQuery['meetingMetadata.meetingType'] = meetingType;
+    }
+
+    if (dateFrom || dateTo) {
+      analysisQuery['meetingMetadata.date'] = {};
+      if (dateFrom) analysisQuery['meetingMetadata.date'].$gte = new Date(dateFrom);
+      if (dateTo) analysisQuery['meetingMetadata.date'].$lte = new Date(dateTo);
+    }
+
+    const analyses = await Analysis.find(analysisQuery);
 
     let tasks = [];
     analyses.forEach((a) => {

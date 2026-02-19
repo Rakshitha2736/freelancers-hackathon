@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MeetingMetadataForm from '../components/MeetingMetadataForm';
@@ -7,12 +7,10 @@ import { generateSummary } from '../services/api';
 
 const Summarize = () => {
   const [text, setText] = useState('');
-  const [file, setFile] = useState(null);
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploadMode, setUploadMode] = useState('text'); // 'text' or 'file'
-  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   // Calculate if text will be chunked
@@ -20,26 +18,6 @@ const Summarize = () => {
   const wordCount = text.trim().split(/\s+/).filter(w => w).length;
   const willBeChunked = textLength > 15000;
   const estimatedChunks = willBeChunked ? Math.ceil(textLength / 15000) : 1;
-
-  const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (selected) {
-      if (!selected.name.endsWith('.txt')) {
-        setError('Only .txt files are supported.');
-        setFile(null);
-        return;
-      }
-      setFile(selected);
-      setError('');
-
-      // Read file content into textarea
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setText(ev.target.result);
-      };
-      reader.readAsText(selected);
-    }
-  };
 
   const handleSubmit = async () => {
     setError('');
@@ -93,6 +71,7 @@ const Summarize = () => {
             <h3 style={{ marginBottom: '15px', color: '#1f2937' }}>Meeting Details</h3>
             <MeetingMetadataForm 
               onSubmit={(meta) => setMetadata(meta)}
+              onChange={(meta) => setMetadata(meta)}
               initialData={metadata}
             />
           </div>

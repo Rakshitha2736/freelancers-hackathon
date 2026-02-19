@@ -45,6 +45,7 @@ export const generateSummary = (data) => API.post('/analyses/generate', data);
 export const getAnalysis = (id) => API.get(`/analyses/${id}`);
 export const editAnalysis = (id, data) => API.patch(`/analyses/${id}`, data);
 export const confirmSummary = (id, data) => API.post(`/analyses/${id}/confirm`, data);
+export const analyzeExisting = (id) => API.post(`/analyses/${id}/analyze`);
 
 // Tasks
 export const getTasks = (params) => API.get('/tasks', { params });
