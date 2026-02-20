@@ -17,13 +17,18 @@ const initializeSocket = (app) => {
   io = new Server(server, {
     cors: {
       origin: allowedOrigins,
+      credentials: true,
       methods: ['GET', 'POST']
     }
   });
 
-  // Middleware for socket authentication
+  // Middleware for socket authentication using cookies
   io.use((socket, next) => {
-    const token = socket.handshake?.auth?.token;
+    const token = socket.handshake?.headers?.cookie
+      ?.split('; ')
+      .find(row => row.startsWith('access_token='))
+      ?.split('=')?.[1];
+
     if (!token) {
       return next(new Error('Authentication required'));
     }

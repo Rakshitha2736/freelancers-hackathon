@@ -96,6 +96,8 @@ API.interceptors.response.use(
 export const signup = (data) => API.post('/auth/signup', data);
 export const login = (data) => API.post('/auth/login', data);
 export const getMe = () => API.get('/auth/me');
+export const logout = () => API.post('/auth/logout', {});
+export const refreshToken = () => API.post('/auth/refresh', {});
 
 // Analyses
 export const generateSummary = (data) => API.post('/analyses/generate', data, { timeout: 60000 });

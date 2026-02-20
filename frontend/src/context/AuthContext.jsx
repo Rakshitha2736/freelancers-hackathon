@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getMe } from '../services/api';
+import { getMe, logout as logoutAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -11,41 +11,46 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
+  // Load user on mount by checking /api/auth/me
   useEffect(() => {
     const loadUser = async () => {
-      if (token) {
-        try {
-          const res = await getMe();
-          setUser(res.data.user || res.data);
-        } catch {
-          logout();
-        }
+      try {
+        const res = await getMe();
+        setUser(res.data.user || res.data);
+      } catch {
+        // Not authenticated or token expired
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
+    
     loadUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loginUser = (tokenValue, userData) => {
-    localStorage.setItem('token', tokenValue);
-    setToken(tokenValue);
+    // With HttpOnly cookies, we don't store token in localStorage
+    // Just set the user data
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Call logout API to clear cookies on server
+      await logoutAPI();
+    } catch (err) {
+      // Log out locally even if API call fails
+      console.error('Logout API error:', err);
+    } finally {
+      setUser(null);
+    }
   };
 
   const value = {
     user,
-    token,
-    isAuthenticated: !!token,
+    isAuthenticated: !!user,
     loading,
     login: loginUser,
     logout,

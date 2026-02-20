@@ -121,8 +121,13 @@ const Signup = () => {
         email: form.email.trim(),
         password: form.password,
       });
-      const { token, user } = res.data;
-      login(token, user);
+      
+      // With cookie-based auth, token is in HttpOnly cookie, not in response
+      // User data is in res.data.user
+      const userData = res.data.user;
+      
+      // Store user in auth context (token is automatically handled via cookies)
+      login(null, userData);
       navigate('/dashboard');
     } catch (err) {
       if (err.code === 'ERR_NETWORK' || !err.response) {

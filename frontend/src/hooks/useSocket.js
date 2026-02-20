@@ -10,10 +10,7 @@ export const useSocket = (userId) => {
     if (!userId) return;
 
     const socket = io(SOCKET_URL, {
-      auth: {
-        token: localStorage.getItem('token'),
-        userId
-      },
+      withCredentials: true,  // Send cookies with socket requests
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
