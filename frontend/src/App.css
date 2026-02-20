@@ -45,6 +45,16 @@ body {
   flex: 1;
 }
 
+.main-content-full {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .page-header {
   display: flex;
   align-items: center;
@@ -2023,54 +2033,72 @@ body {
    DASHBOARD LAYOUT (WITH SIDEBAR)
    ======================================== */
 .dashboard-container {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 24px;
+  display: flex;
+  flex: 1;
   width: 100%;
+  min-height: 100vh;
+  background: var(--bg-secondary);
 }
 
 .dashboard-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  min-width: 320px;
+  height: 100vh;
   position: sticky;
-  top: 24px;
-  height: fit-content;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  top: 0;
+  border-right: 1px solid #e5e7eb;
+  overflow: hidden;
+  background: white;
+}
+
+body.dark .dashboard-sidebar {
+  border-right-color: #374151;
+  background: #111827;
 }
 
 .dashboard-main {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 24px;
+  padding: 32px 40px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+}
+
+body.dark .dashboard-main {
+  background: var(--bg-secondary);
 }
 
 /* Responsive: Stack on tablets and below */
 @media (max-width: 1024px) {
   .dashboard-container {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    flex-direction: column;
   }
 
   .dashboard-sidebar {
     position: static;
-    top: auto;
-    max-height: none;
+    width: 100%;
+    min-width: auto;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  body.dark .dashboard-sidebar {
+    border-bottom-color: #374151;
+  }
+
+  .dashboard-main {
+    padding: 24px 20px;
   }
 }
 
-/* Meeting filter sidebar scrollbar */
-.dashboard-sidebar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dashboard-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dashboard-sidebar::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-
-.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .dashboard-main {
+    padding: 20px 16px;
+  }
 }

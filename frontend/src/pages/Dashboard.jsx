@@ -323,7 +323,7 @@ const Dashboard = () => {
   return (
     <div className="page-wrapper">
       <Navbar />
-      <main className="main-content">
+      <main className="main-content-full">
         <div className="dashboard-container">
           {/* Meeting Filter Sidebar */}
           <aside className="dashboard-sidebar">
