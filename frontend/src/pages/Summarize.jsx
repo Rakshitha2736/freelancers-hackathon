@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 import Navbar from '../components/Navbar';
 import MeetingMetadataForm from '../components/MeetingMetadataForm';
 import FileUploadDropZone from '../components/FileUploadDropZone';
 import { generateSummary } from '../services/api';
 
 const Summarize = () => {
+  const { isDark } = useTheme();
   const [text, setText] = useState('');
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   const [uploadMode, setUploadMode] = useState('text'); // 'text' or 'file'
   const navigate = useNavigate();
 
@@ -21,6 +24,14 @@ const Summarize = () => {
 
   const handleSubmit = async () => {
     setError('');
+    setValidationErrors({});
+
+    // Validate meeting title if metadata is provided
+    if (metadata && !metadata.title.trim()) {
+      setValidationErrors({ title: 'Meeting title is required' });
+      setError('Please provide a meeting title.');
+      return;
+    }
 
     const trimmedText = text.trim();
     
@@ -58,13 +69,17 @@ const Summarize = () => {
   };
 
   return (
-    <div className="page-wrapper">
+    <div className="page-wrapper" style={{
+      background: isDark ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : undefined,
+      minHeight: '100vh',
+      transition: 'background 0.3s ease',
+    }}>
       <Navbar />
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h1>Meeting Summarization</h1>
-            <p className="text-muted">
+            <h1 style={{ color: isDark ? '#f3f4f6' : undefined }}>Meeting Summarization</h1>
+            <p className="text-muted" style={{ color: isDark ? '#9ca3af' : undefined }}>
               Capture meeting details and generate AI-powered summaries and action items
             </p>
           </div>
@@ -72,15 +87,20 @@ const Summarize = () => {
 
         {error && <div className="alert alert-error">{error}</div>}
 
-        <div className="summarize-card">
+        <div className="summarize-card" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '24px',
+        }}>
           {/* Step 1: Meeting Details */}
           <section style={{ 
-            padding: '24px', 
-            backgroundColor: '#f9fafb', 
+            padding: '28px', 
+            backgroundColor: isDark ? '#1e293b' : '#f9fafb',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
+            transition: 'all 0.3s ease',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <div style={{ 
                 width: '32px', 
                 height: '32px', 
@@ -93,24 +113,31 @@ const Summarize = () => {
                 fontWeight: 'bold',
                 fontSize: '14px'
               }}>1</div>
-              <h3 style={{ margin: 0, color: '#1f2937', fontSize: '18px', fontWeight: '600' }}>
-                Meeting Details (Optional)
+              <h3 style={{ 
+                margin: 0, 
+                color: isDark ? '#f3f4f6' : '#1f2937', 
+                fontSize: '18px', 
+                fontWeight: '600' 
+              }}>
+                Meeting Details
               </h3>
             </div>
             <MeetingMetadataForm 
               onChange={(meta) => setMetadata(meta)}
               initialData={metadata}
+              validationErrors={validationErrors}
             />
           </section>
 
           {/* Step 2: Choose Input Method */}
           <section style={{ 
-            padding: '24px', 
-            backgroundColor: '#f9fafb', 
+            padding: '28px', 
+            backgroundColor: isDark ? '#1e293b' : '#f9fafb',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
+            transition: 'all 0.3s ease',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <div style={{ 
                 width: '32px', 
                 height: '32px', 
@@ -123,22 +150,27 @@ const Summarize = () => {
                 fontWeight: 'bold',
                 fontSize: '14px'
               }}>2</div>
-              <h3 style={{ margin: 0, color: '#1f2937', fontSize: '18px', fontWeight: '600' }}>
+              <h3 style={{ 
+                margin: 0, 
+                color: isDark ? '#f3f4f6' : '#1f2937', 
+                fontSize: '18px', 
+                fontWeight: '600' 
+              }}>
                 Choose Input Method
               </h3>
             </div>
 
             {/* Upload Mode Selector */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
               <button
                 type="button"
                 onClick={() => setUploadMode('text')}
                 style={{
                   flex: 1,
                   padding: '14px 20px',
-                  backgroundColor: uploadMode === 'text' ? '#6366f1' : 'white',
-                  color: uploadMode === 'text' ? 'white' : '#4b5563',
-                  border: uploadMode === 'text' ? 'none' : '2px solid #e5e7eb',
+                  backgroundColor: uploadMode === 'text' ? '#6366f1' : (isDark ? '#374151' : 'white'),
+                  color: uploadMode === 'text' ? 'white' : (isDark ? '#f3f4f6' : '#4b5563'),
+                  border: uploadMode === 'text' ? 'none' : (isDark ? '2px solid #4b5563' : '2px solid #e5e7eb'),
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: '600',
@@ -166,9 +198,9 @@ const Summarize = () => {
                 style={{
                   flex: 1,
                   padding: '14px 20px',
-                  backgroundColor: uploadMode === 'file' ? '#6366f1' : 'white',
-                  color: uploadMode === 'file' ? 'white' : '#4b5563',
-                  border: uploadMode === 'file' ? 'none' : '2px solid #e5e7eb',
+                  backgroundColor: uploadMode === 'file' ? '#6366f1' : (isDark ? '#374151' : 'white'),
+                  color: uploadMode === 'file' ? 'white' : (isDark ? '#f3f4f6' : '#4b5563'),
+                  border: uploadMode === 'file' ? 'none' : (isDark ? '2px solid #4b5563' : '2px solid #e5e7eb'),
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: '600',
@@ -193,14 +225,16 @@ const Summarize = () => {
             {/* Text Input Mode */}
             {uploadMode === 'text' && (
               <>
-                <div className="form-group" style={{ marginBottom: '16px' }}>
+                <div className="form-group" style={{ marginBottom: '20px' }}>
                   <label htmlFor="meeting-text" style={{ 
                     display: 'block', 
                     marginBottom: '8px', 
-                    fontWeight: '500',
-                    color: '#374151',
+                    fontWeight: '600',
+                    color: isDark ? '#f3f4f6' : '#374151',
                     fontSize: '14px'
-                  }}>Meeting Transcript</label>
+                  }}>
+                    Meeting Transcript <span style={{ color: '#ef4444', fontSize: '16px' }}>*</span>
+                  </label>
                   <textarea
                     id="meeting-text"
                     className="summarize-textarea"
@@ -209,10 +243,16 @@ const Summarize = () => {
                     onChange={(e) => setText(e.target.value)}
                     rows={14}
                     disabled={loading}
+                    style={{
+                      backgroundColor: isDark ? '#374151' : 'white',
+                      color: isDark ? '#f3f4f6' : '#1f2937',
+                      borderColor: isDark ? '#4b5563' : '#e5e7eb',
+                      transition: 'all 0.2s ease',
+                    }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                     {text.trim() && (
-                      <span className="char-count">
+                      <span className="char-count" style={{ color: isDark ? '#9ca3af' : undefined }}>
                         {text.trim().split(/\s+/).filter(w => w).length} words · {text.trim().length.toLocaleString()} characters
                       </span>
                     )}
@@ -268,7 +308,12 @@ const Summarize = () => {
                   }}
                   metadata={metadata || {}}
                 />
-                <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '12px', textAlign: 'center' }}>
+                <p style={{ 
+                  fontSize: '13px', 
+                  color: isDark ? '#9ca3af' : '#6b7280', 
+                  marginTop: '12px', 
+                  textAlign: 'center' 
+                }}>
                   📎 Files are processed immediately after upload
                 </p>
               </>

@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import MeetingFilterList from '../components/MeetingFilterList';
 import useSocket from '../hooks/useSocket';
-import { getTasks, updateTask } from '../services/api';
+import { getTasks, updateTask, getMeetings } from '../services/api';
 
 const Kanban = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { connected, on, off } = useSocket(user?._id);
   const [tasks, setTasks] = useState({ pending: [], inProgress: [], completed: [] });
+  const [meetings, setMeetings] = useState([]);
+  const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [draggedTask, setDraggedTask] = useState(null);
   const [error, setError] = useState('');
@@ -93,8 +96,12 @@ const Kanban = () => {
         params.mine = true;
       }
       
-      const res = await getTasks(params);
-      const allTasks = res.data.tasks || res.data || [];
+      const [tasksRes, meetingsRes] = await Promise.all([
+        getTasks(params),
+        getMeetings(),
+      ]);
+      
+      const allTasks = tasksRes.data.tasks || tasksRes.data || [];
       
       // Group tasks by status
       const grouped = {
@@ -104,6 +111,7 @@ const Kanban = () => {
       };
       
       setTasks(grouped);
+      setMeetings(meetingsRes.data.meetings || []);
     } catch (err) {
       console.error('Failed to load tasks:', err);
       setError('Failed to load tasks. Please refresh.');
@@ -171,8 +179,45 @@ const Kanban = () => {
     return new Date(date) < new Date();
   };
 
-  const totalTasks = tasks.pending.length + tasks.inProgress.length + tasks.completed.length;
-  const completionRate = totalTasks === 0 ? '0%' : `${Math.round((tasks.completed.length / totalTasks) * 100)}%`;
+  // Handle meeting deletion
+  const handleDeleteMeeting = useCallback((meetingId) => {
+    // Remove meeting from meetings list
+    setMeetings((prev) => prev.filter((m) => m._id !== meetingId));
+
+    // Remove all tasks associated with this meeting
+    setTasks((prev) => ({
+      pending: prev.pending.filter((task) => task.meetingId !== meetingId),
+      inProgress: prev.inProgress.filter((task) => task.meetingId !== meetingId),
+      completed: prev.completed.filter((task) => task.meetingId !== meetingId),
+    }));
+
+    // Reset selected meeting if it was the deleted one
+    if (selectedMeetingId === meetingId) {
+      setSelectedMeetingId(null);
+    }
+  }, [selectedMeetingId]);
+
+  // Filter tasks by selected meeting
+  const filteredTasks = useMemo(() => {
+    if (!selectedMeetingId) {
+      return tasks;
+    }
+
+    return {
+      pending: tasks.pending.filter((task) => task.meetingId === selectedMeetingId),
+      inProgress: tasks.inProgress.filter((task) => task.meetingId === selectedMeetingId),
+      completed: tasks.completed.filter((task) => task.meetingId === selectedMeetingId),
+    };
+  }, [tasks, selectedMeetingId]);
+
+  // Compute stats from filtered tasks
+  const totalTasks = filteredTasks.pending.length + filteredTasks.inProgress.length + filteredTasks.completed.length;
+  const completionRate = totalTasks === 0 ? '0%' : `${Math.round((filteredTasks.completed.length / totalTasks) * 100)}%`;
+
+  // Find selected meeting for display
+  const selectedMeeting = useMemo(() => {
+    return selectedMeetingId ? meetings.find((m) => m._id === selectedMeetingId) : null;
+  }, [selectedMeetingId, meetings]);
 
   if (loading) {
     return (
@@ -279,148 +324,168 @@ const Kanban = () => {
   return (
     <div className="page-wrapper">
       <Navbar />
-      <main className="main-content">
-        <div className="page-header">
-          <div>
-            <h1>Kanban Board</h1>
-            <p className="text-muted">Drag and drop tasks to update their status</p>
-            {showMyTasksOnly && (
-              <div style={{ 
-                marginTop: '8px', 
-                padding: '6px 12px', 
-                background: '#dbeafe', 
-                color: '#1e40af', 
-                borderRadius: '6px', 
-                display: 'inline-block',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}>
-                👤 Showing tasks assigned to: {user?.name || 'you'}
+      <main className="main-content-full">
+        <div className="dashboard-container">
+          {/* Meeting Filter Sidebar */}
+          <aside className="dashboard-sidebar">
+            <MeetingFilterList
+              meetings={meetings}
+              selectedMeetingId={selectedMeetingId}
+              onSelectMeeting={setSelectedMeetingId}
+              onDeleteMeeting={handleDeleteMeeting}
+              loading={loading}
+            />
+          </aside>
+
+          {/* Main Kanban Content */}
+          <section className="dashboard-main">
+            <div className="page-header">
+              <div>
+                <h1>Kanban Board</h1>
+                <p className="text-muted">
+                  {selectedMeeting
+                    ? `Tasks from: ${selectedMeeting.title}`
+                    : 'Drag and drop tasks to update their status'}
+                </p>
+                {showMyTasksOnly && (
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '6px 12px', 
+                    background: '#dbeafe', 
+                    color: '#1e40af', 
+                    borderRadius: '6px', 
+                    display: 'inline-block',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    👤 Showing tasks assigned to: {user?.name || 'you'}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              className={showMyTasksOnly ? "btn btn-primary" : "btn btn-secondary"}
-              onClick={() => setShowMyTasksOnly(!showMyTasksOnly)}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                fontWeight: showMyTasksOnly ? '600' : '500'
-              }}
-            >
-              {showMyTasksOnly ? '✓' : ''} My Tasks Only
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate('/analytics')}
-            >
-              📊 Analytics
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate('/dashboard')}
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-
-        {error && <div className="alert alert-error">{error}</div>}
-
-        {/* Progress Stats */}
-        <div className="kanban-stats-grid">
-          <div className="kanban-stat-card kanban-stat-total">
-            <div className="kanban-stat-value">{totalTasks}</div>
-            <div className="kanban-stat-label">Total Tasks</div>
-          </div>
-          <div className="kanban-stat-card kanban-stat-completed">
-            <div className="kanban-stat-value">{tasks.completed.length}</div>
-            <div className="kanban-stat-label">Completed</div>
-          </div>
-          <div className="kanban-stat-card kanban-stat-progress">
-            <div className="kanban-stat-value">{tasks.inProgress.length}</div>
-            <div className="kanban-stat-label">In Progress</div>
-          </div>
-          <div className="kanban-stat-card kanban-stat-rate">
-            <div className="kanban-stat-value">{completionRate}</div>
-            <div className="kanban-stat-label">Completion Rate</div>
-          </div>
-        </div>
-
-        <div className="kanban-container">
-          {/* Pending Column */}
-          <div
-            className="kanban-column"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, 'Pending')}
-          >
-            <div className="kanban-header" style={{ borderColor: '#ef4444' }}>
-              <h3 style={{ color: '#ef4444' }}>
-                📋 Pending
-              </h3>
-              <span className="kanban-count">{tasks.pending.length}</span>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <button
+                  className={showMyTasksOnly ? "btn btn-primary" : "btn btn-secondary"}
+                  onClick={() => setShowMyTasksOnly(!showMyTasksOnly)}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    fontWeight: showMyTasksOnly ? '600' : '500'
+                  }}
+                >
+                  {showMyTasksOnly ? '✓' : ''} My Tasks Only
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/analytics')}
+                >
+                  📊 Analytics
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Back to Dashboard
+                </button>
+              </div>
             </div>
-            <div className="kanban-cards">
-              {tasks.pending.map(task => (
-                <KanbanCard key={task._id} task={task} />
-              ))}
-              {tasks.pending.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                  No pending tasks
+
+            {error && <div className="alert alert-error">{error}</div>}
+
+            {/* Progress Stats */}
+            <div className="kanban-stats-grid">
+              <div className="kanban-stat-card kanban-stat-total">
+                <div className="kanban-stat-value">{totalTasks}</div>
+                <div className="kanban-stat-label">Total Tasks</div>
+              </div>
+              <div className="kanban-stat-card kanban-stat-completed">
+                <div className="kanban-stat-value">{filteredTasks.completed.length}</div>
+                <div className="kanban-stat-label">Completed</div>
+              </div>
+              <div className="kanban-stat-card kanban-stat-progress">
+                <div className="kanban-stat-value">{filteredTasks.inProgress.length}</div>
+                <div className="kanban-stat-label">In Progress</div>
+              </div>
+              <div className="kanban-stat-card kanban-stat-rate">
+                <div className="kanban-stat-value">{completionRate}</div>
+                <div className="kanban-stat-label">Completion Rate</div>
+              </div>
+            </div>
+
+            <div className="kanban-container">
+              {/* Pending Column */}
+              <div
+                className="kanban-column"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, 'Pending')}
+              >
+                <div className="kanban-header" style={{ borderColor: '#ef4444' }}>
+                  <h3 style={{ color: '#ef4444' }}>
+                    📋 Pending
+                  </h3>
+                  <span className="kanban-count">{filteredTasks.pending.length}</span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* In Progress Column */}
-          <div
-            className="kanban-column"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, 'In Progress')}
-          >
-            <div className="kanban-header" style={{ borderColor: '#f59e0b' }}>
-              <h3 style={{ color: '#f59e0b' }}>
-                ⚡ In Progress
-              </h3>
-              <span className="kanban-count">{tasks.inProgress.length}</span>
-            </div>
-            <div className="kanban-cards">
-              {tasks.inProgress.map(task => (
-                <KanbanCard key={task._id} task={task} />
-              ))}
-              {tasks.inProgress.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                  No tasks in progress
+                <div className="kanban-cards">
+                  {filteredTasks.pending.map(task => (
+                    <KanbanCard key={task._id} task={task} />
+                  ))}
+                  {filteredTasks.pending.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                      No pending tasks
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Completed Column */}
-          <div
-            className="kanban-column"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, 'Completed')}
-          >
-            <div className="kanban-header" style={{ borderColor: '#10b981' }}>
-              <h3 style={{ color: '#10b981' }}>
-                ✅ Completed
-              </h3>
-              <span className="kanban-count">{tasks.completed.length}</span>
-            </div>
-            <div className="kanban-cards">
-              {tasks.completed.map(task => (
-                <KanbanCard key={task._id} task={task} />
-              ))}
-              {tasks.completed.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
-                  No completed tasks
+              {/* In Progress Column */}
+              <div
+                className="kanban-column"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, 'In Progress')}
+              >
+                <div className="kanban-header" style={{ borderColor: '#f59e0b' }}>
+                  <h3 style={{ color: '#f59e0b' }}>
+                    ⚡ In Progress
+                  </h3>
+                  <span className="kanban-count">{filteredTasks.inProgress.length}</span>
                 </div>
-              )}
+                <div className="kanban-cards">
+                  {filteredTasks.inProgress.map(task => (
+                    <KanbanCard key={task._id} task={task} />
+                  ))}
+                  {filteredTasks.inProgress.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                      No tasks in progress
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Completed Column */}
+              <div
+                className="kanban-column"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, 'Completed')}
+              >
+                <div className="kanban-header" style={{ borderColor: '#10b981' }}>
+                  <h3 style={{ color: '#10b981' }}>
+                    ✅ Completed
+                  </h3>
+                  <span className="kanban-count">{filteredTasks.completed.length}</span>
+                </div>
+                <div className="kanban-cards">
+                  {filteredTasks.completed.map(task => (
+                    <KanbanCard key={task._id} task={task} />
+                  ))}
+                  {filteredTasks.completed.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9ca3af' }}>
+                      No completed tasks
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
       </main>
     </div>

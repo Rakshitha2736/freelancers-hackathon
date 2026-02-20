@@ -18,25 +18,29 @@ const MeetingFilterList = ({ meetings, selectedMeetingId, onSelectMeeting, onDel
   }, [deletingMeetingId]);
   if (loading) {
     return (
-      <div className="meeting-filter-container">
-        <div className="meeting-filter-header">
+      <>
+        <div className={`meeting-sidebar-header ${isDark ? 'dark' : 'light'}`}>
           <h3>📅 Meetings</h3>
         </div>
-        <div className="meeting-list-loading">Loading meetings...</div>
-      </div>
+        <div className={`meeting-sidebar-content ${isDark ? 'dark' : 'light'}`}>
+          <div className="meeting-list-loading">Loading meetings...</div>
+        </div>
+      </>
     );
   }
 
   if (!meetings || meetings.length === 0) {
     return (
-      <div className="meeting-filter-container">
-        <div className="meeting-filter-header">
+      <>
+        <div className={`meeting-sidebar-header ${isDark ? 'dark' : 'light'}`}>
           <h3>📅 Meetings</h3>
         </div>
-        <div className="meeting-list-empty">
-          <p>No meetings yet</p>
+        <div className={`meeting-sidebar-content ${isDark ? 'dark' : 'light'}`}>
+          <div className="meeting-list-empty">
+            <p>No meetings yet</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -90,70 +94,69 @@ const MeetingFilterList = ({ meetings, selectedMeetingId, onSelectMeeting, onDel
       {/* Modal rendered via React Portal */}
       {modalContent}
 
-      {/* Meeting Filter Container with dark mode support */}
-      <div className={`meeting-filter-container ${isDark ? 'dark' : 'light'}`}>
-        <div className={`meeting-filter-header ${isDark ? 'dark' : 'light'}`}>
-          <h3>📅 Meetings ({meetings.length})</h3>
-          {selectedMeetingId && (
-            <button
-              className={`btn-clear-filter ${isDark ? 'dark' : 'light'}`}
-              onClick={() => onSelectMeeting(null)}
-              title="Show all meetings"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        <div className={`meeting-list ${isDark ? 'dark' : 'light'}`}>
-          {/* "All Meetings" option */}
-          <div
-            className={`meeting-item ${selectedMeetingId === null ? 'active' : ''} ${isDark ? 'dark' : 'light'}`}
+      {/* Sidebar Header - Sticky */}
+      <div className={`meeting-sidebar-header ${isDark ? 'dark' : 'light'}`}>
+        <h3>📅 Meetings ({meetings.length})</h3>
+        {selectedMeetingId && (
+          <button
+            className={`btn-clear-filter ${isDark ? 'dark' : 'light'}`}
             onClick={() => onSelectMeeting(null)}
+            title="Show all meetings"
           >
-            <div className="meeting-item-content">
-              <div className="meeting-item-title">All Meetings</div>
-              <div className="meeting-item-meta">
-                Total: {meetings.reduce((sum, m) => sum + m.taskCount, 0)} tasks
-              </div>
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Scrollable Meeting List */}
+      <div className={`meeting-sidebar-content ${isDark ? 'dark' : 'light'}`}>
+        {/* "All Meetings" option */}
+        <div
+          className={`meeting-item ${selectedMeetingId === null ? 'active' : ''} ${isDark ? 'dark' : 'light'}`}
+          onClick={() => onSelectMeeting(null)}
+        >
+          <div className="meeting-item-content">
+            <div className="meeting-item-title">All Meetings</div>
+            <div className="meeting-item-meta">
+              Total: {meetings.reduce((sum, m) => sum + m.taskCount, 0)} tasks
             </div>
           </div>
-
-          {/* Individual meetings */}
-          {meetings.map((meeting) => (
-            <div
-              key={meeting._id}
-              className={`meeting-item ${selectedMeetingId === meeting._id ? 'active' : ''} ${isDark ? 'dark' : 'light'}`}
-              onClick={() => onSelectMeeting(meeting._id)}
-              title={meeting.title}
-            >
-              <div className="meeting-item-icon">
-                {getMeetingTypeIcon(meeting.meetingType)}
-              </div>
-              <div className="meeting-item-content">
-                <div className="meeting-item-title">{meeting.title}</div>
-                <div className="meeting-item-meta">
-                  <span className={`meeting-date ${isDark ? 'dark' : 'light'}`}>
-                    {new Date(meeting.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </span>
-                  <span className={`meeting-type ${isDark ? 'dark' : 'light'}`}>{meeting.meetingType}</span>
-                  <span className={`task-badge ${isDark ? 'dark' : 'light'}`}>{meeting.taskCount}</span>
-                </div>
-              </div>
-              <button
-                className={`btn-delete-meeting ${isDark ? 'dark' : 'light'}`}
-                onClick={(e) => handleDeleteClick(e, meeting)}
-                title="Delete meeting and all related tasks"
-                aria-label="Delete meeting"
-              >
-                🗑️
-              </button>
-            </div>
-          ))}
         </div>
+
+        {/* Individual meetings */}
+        {meetings.map((meeting) => (
+          <div
+            key={meeting._id}
+            className={`meeting-item ${selectedMeetingId === meeting._id ? 'active' : ''} ${isDark ? 'dark' : 'light'}`}
+            onClick={() => onSelectMeeting(meeting._id)}
+            title={meeting.title}
+          >
+            <div className="meeting-item-icon">
+              {getMeetingTypeIcon(meeting.meetingType)}
+            </div>
+            <div className="meeting-item-content">
+              <div className="meeting-item-title">{meeting.title}</div>
+              <div className="meeting-item-meta">
+                <span className={`meeting-date ${isDark ? 'dark' : 'light'}`}>
+                  {new Date(meeting.date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
+                <span className={`meeting-type ${isDark ? 'dark' : 'light'}`}>{meeting.meetingType}</span>
+                <span className={`task-badge ${isDark ? 'dark' : 'light'}`}>{meeting.taskCount}</span>
+              </div>
+            </div>
+            <button
+              className={`btn-delete-meeting ${isDark ? 'dark' : 'light'}`}
+              onClick={(e) => handleDeleteClick(e, meeting)}
+              title="Delete meeting and all related tasks"
+              aria-label="Delete meeting"
+            >
+              🗑️
+            </button>
+          </div>
+        ))}
       </div>
     </>
   );
