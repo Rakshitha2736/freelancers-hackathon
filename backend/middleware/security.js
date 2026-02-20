@@ -15,8 +15,9 @@ const createRateLimiter = (windowMs, max, message) => {
 
 // API rate limiters
 const apiLimiter = createRateLimiter(15 * 60 * 1000, 100, 'Too many API requests');
-const authLimiter = createRateLimiter(15 * 60 * 1000, 5, 'Too many auth attempts');
-const uploadLimiter = createRateLimiter(60 * 60 * 1000, 10, 'Too many uploads');
+const authStrictLimiter = createRateLimiter(15 * 60 * 1000, 5, 'Too many auth attempts');
+const analysisRateLimiter = createRateLimiter(15 * 60 * 1000, 60, 'Too many analysis requests');
+const uploadRateLimiter = createRateLimiter(15 * 60 * 1000, 30, 'Too many upload requests');
 
 // Input validation middleware
 const validateInput = (schema) => {
@@ -91,6 +92,8 @@ const securityHeaders = (req, res, next) => {
   next();
 };
 
+const securityMiddleware = securityHeaders;
+
 // API key validation
 const validateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
@@ -101,9 +104,13 @@ const validateApiKey = (req, res, next) => {
 };
 
 module.exports = {
+  securityMiddleware,
   apiLimiter,
-  authLimiter,
-  uploadLimiter,
+  authStrictLimiter,
+  analysisRateLimiter,
+  uploadRateLimiter,
+  authLimiter: authStrictLimiter,
+  uploadLimiter: uploadRateLimiter,
   validateInput,
   schemas,
   securityHeaders,

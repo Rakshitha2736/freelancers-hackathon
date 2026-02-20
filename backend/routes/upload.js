@@ -1,13 +1,18 @@
 // backend/routes/upload.js
 const express = require('express');
 const multer = require('multer');
+const { body } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
 const authenticate = require('../middleware/auth');
+const { uploadRateLimiter } = require('../middleware/security');
+const { handleValidationErrors } = require('../middleware/validation');
 const fileService = require('../services/fileService');
 const Analysis = require('../models/Analysis');
 
 const router = express.Router();
+router.use(authenticate);
+router.use(uploadRateLimiter);
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -28,7 +33,29 @@ const upload = multer({
  * Upload meeting transcript file
  * POST /api/upload
  */
-router.post('/', authenticate, upload.single('file'), async (req, res) => {
+router.post(
+  '/',
+  upload.single('file'),
+  [
+    body('title').optional().isString().trim(),
+    body('date').optional().isISO8601(),
+    body('meetingType').optional().isIn(['Standup', 'Planning', 'Review', 'Retrospective', '1:1', 'Other']),
+    body('location').optional().isString().trim(),
+    body('duration').optional().isInt({ min: 0 }),
+    body('participants').optional().custom((value) => {
+      try {
+        const parsed = JSON.parse(value);
+        if (!Array.isArray(parsed)) {
+          throw new Error('participants must be a JSON array');
+        }
+        return true;
+      } catch (error) {
+        throw new Error('participants must be a valid JSON array');
+      }
+    }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -97,7 +124,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
  * Get upload progress (for large files)
  * GET /api/upload/progress/:analysisId
  */
-router.get('/progress/:analysisId', authenticate, async (req, res) => {
+router.get('/progress/:analysisId', async (req, res) => {
   try {
     const analysis = await Analysis.findById(req.params.analysisId);
     if (!analysis) {
@@ -122,7 +149,7 @@ router.get('/progress/:analysisId', authenticate, async (req, res) => {
  * Delete uploaded file
  * DELETE /api/upload/:analysisId
  */
-router.delete('/:analysisId', authenticate, async (req, res) => {
+router.delete('/:analysisId', async (req, res) => {
   try {
     const analysis = await Analysis.findById(req.params.analysisId);
     if (!analysis) {

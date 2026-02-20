@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const connectDB = require('./config/db');
 const { initializeSocket } = require('./socket');
+const { securityMiddleware } = require('./middleware/security');
 
 const authRoutes = require('./routes/auth');
 const analysisRoutes = require('./routes/analyses');
@@ -13,10 +14,17 @@ const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const CLIENT_URL = process.env.CLIENT_URL;
+
+const corsOptions = {
+  origin: CLIENT_URL || true,
+  credentials: true,
+};
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors(corsOptions));
+app.use(securityMiddleware);
 app.use(express.json({ limit: '5mb' }));
 
 // Routes
@@ -47,8 +55,8 @@ const startServer = async () => {
   await connectDB();
   const server = initializeSocket(app);
   server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`WebSocket server ready on ws://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`WebSocket server ready on port ${PORT}`);
   });
 };
 

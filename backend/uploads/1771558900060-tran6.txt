@@ -1,0 +1,155 @@
+Sowmiya S: Good morning everyone. Let’s start on time because we really need to finalize the complete project timeline today. We have exactly six weeks before the final evaluation, and I don’t want any confusion about responsibilities or deadlines. By the end of this meeting, every task should have an owner and a due date.
+
+Subash: Yes, and this time we need to avoid last-minute rush. In the previous project, we ended up fixing bugs two hours before submission.
+
+Vijeth: That was mostly because backend APIs were not stable when frontend integration started.
+
+Rakshitha: And UI changes were requested very late, so everything got delayed.
+
+Yuvadharshini: Okay, let’s not revisit old issues. Let’s plan properly this time.
+
+Sowmiya S: Exactly. So first, let’s confirm the overall timeline. Week 1 will be requirements finalization and UI wireframes. Week 2 will focus on backend core APIs. Week 3 is frontend integration. Week 4 is advanced features like notifications and reporting. Week 5 is testing and optimization. Week 6 is documentation, deployment polishing, and buffer time. Does anyone disagree with this structure?
+
+Subash: It sounds structured, but we need exact dates.
+
+Sowmiya S: Today is Monday. So by Wednesday 6 PM this week, I want the final requirements document completed. Subash, you’ll take responsibility for drafting it. It should include feature list, user roles, database entities, and user flow diagrams.
+
+Subash: Okay, I’ll prepare a complete document and share it by Wednesday before 6 PM. If I need clarifications, I’ll ask before Tuesday evening.
+
+Sowmiya S: Good. That’s high priority. No delays there because backend planning depends on it.
+
+Rakshitha: When should I start UI wireframes?
+
+Sowmiya S: You can start parallelly. Deadline for complete wireframes, including mobile responsiveness, is Friday 8 PM this week.
+
+Rakshitha: That’s three and a half days. I can manage. I’ll design dashboard, event creation page, registration page, and admin panel layouts.
+
+Vijeth: Please ensure spacing and components are realistic for development. Sometimes designs are too abstract.
+
+Rakshitha: Don’t worry. I’ll keep it practical.
+
+Sowmiya S: Next, database schema. Vijeth, I want schema finalized by Sunday 11:59 PM. That includes collections for Users, Events, Registrations, and Notifications.
+
+Vijeth: I’ll also add indexing on event date and user ID to optimize queries.
+
+Yuvadharshini: Add logs collection too. We might need it for debugging and analytics.
+
+Vijeth: Good idea. I’ll include logs as well.
+
+Sowmiya S: Moving to backend development timeline. Authentication system must be ready by next Monday 5 PM. That includes signup, login, JWT implementation, and password hashing.
+
+Subash: Use bcrypt with at least 12 salt rounds.
+
+Vijeth: Yes, bcrypt with 12 rounds and JWT with 7-day expiry.
+
+Sowmiya S: Event creation and update APIs should be ready by Wednesday of Week 2 at 7 PM. Registration APIs by Thursday 6 PM. Admin dashboard endpoints by Friday 8 PM.
+
+Vijeth: That’s aggressive, but manageable if there are no requirement changes.
+
+Sowmiya S: There will be no feature additions after Wednesday this week. After requirements are locked, no scope expansion.
+
+Rakshitha: When will APIs be stable for frontend integration?
+
+Vijeth: By end of Week 2 Friday night.
+
+Sowmiya S: So frontend integration starts Monday of Week 3 at 9 AM. Rakshitha and Subash, you both coordinate for integration. Final integrated frontend should be complete by Friday Week 3 at 7 PM.
+
+Subash: That gives us five working days. Fine.
+
+Yuvadharshini: What about notification system?
+
+Sowmiya S: Week 4. Email notifications for event registration confirmations must be completed by Wednesday Week 4 at 6 PM. Yuvadharshini, that’s yours.
+
+Yuvadharshini: Okay. I’ll research nodemailer or a similar service and implement it.
+
+Vijeth: Ensure email templates are reusable.
+
+Sowmiya S: Also, basic analytics like total events, total registrations, and upcoming events should be ready by Friday Week 4 at 8 PM.
+
+Subash: I can help with analytics aggregation queries.
+
+Sowmiya S: Good. Now let’s discuss testing. Unit testing for backend APIs must start Monday Week 5 and be completed by Tuesday Week 5 at 9 PM.
+
+Vijeth: I’ll write basic test cases for authentication and event APIs.
+
+Rakshitha: UI testing across devices will be done Wednesday Week 5.
+
+Yuvadharshini: We should also do load testing at least with 200 simulated users.
+
+Sowmiya S: Yes. Basic load test by Thursday Week 5 at 5 PM.
+
+Subash: Deployment deadline?
+
+Sowmiya S: Saturday Week 5 at 6 PM. It must be live and stable by then. No last-day deployment in Week 6.
+
+Vijeth: Hosting platform?
+
+Sowmiya S: Backend on Render, frontend on Vercel, database on MongoDB Atlas.
+
+Subash: Make sure environment variables are not committed.
+
+Sowmiya S: Absolutely. We’ll rotate credentials before deployment.
+
+Rakshitha: Documentation timeline?
+
+Sowmiya S: Week 6 Monday to Wednesday. Documentation must be completed by Wednesday Week 6 at 4 PM. That includes architecture diagram, API documentation, and deployment steps.
+
+Yuvadharshini: I’ll take lead on documentation but need input from everyone.
+
+Sowmiya S: Of course.
+
+Subash: Let’s talk risks. Biggest risk is backend delay.
+
+Vijeth: Second risk is integration issues.
+
+Rakshitha: Third risk is design change after integration.
+
+Yuvadharshini: Fourth is insufficient testing time.
+
+Sowmiya S: Mitigation plan: daily 15-minute sync at 9 PM starting today. If anyone anticipates missing a deadline, inform at least 24 hours in advance.
+
+Subash: That’s fair.
+
+Vijeth: What if authentication takes longer?
+
+Sowmiya S: Then event APIs shift by one day but integration timeline remains same. No shifting Week 3.
+
+Rakshitha: So backend delay compresses backend buffer, not frontend timeline?
+
+Sowmiya S: Exactly.
+
+Yuvadharshini: What about budget?
+
+Sowmiya S: Keep total cost under ₹1000. Free tiers mostly. No paid APIs unless critical.
+
+Subash: Are we including SMS notifications?
+
+Sowmiya S: Only if everything else is stable by Thursday Week 4. It’s optional.
+
+Vijeth: Performance optimization timeline?
+
+Sowmiya S: End of Week 5 after testing results. We’ll optimize slow queries if response time exceeds 500 ms.
+
+Rakshitha: What about mobile UI improvements?
+
+Sowmiya S: Minor improvements can continue until Tuesday Week 6. No layout overhaul after that.
+
+Subash: Should we implement role-based access?
+
+Sowmiya S: Basic admin and user roles by default. No complex role matrix.
+
+Yuvadharshini: What about data backup?
+
+Vijeth: MongoDB Atlas has automatic backups.
+
+Sowmiya S: Good. Let’s summarize final deadlines clearly. Wednesday 6 PM this week – requirements document. Friday 8 PM – UI wireframes. Sunday 11:59 PM – database schema. Next Monday 5 PM – authentication complete. Wednesday Week 2 – event APIs. Thursday Week 2 – registration APIs. Friday Week 2 – admin endpoints. Friday Week 3 7 PM – full frontend integration. Wednesday Week 4 – email notifications. Friday Week 4 – analytics. Tuesday Week 5 – backend testing. Thursday Week 5 – load testing. Saturday Week 5 – deployment live. Wednesday Week 6 – documentation complete.
+
+Subash: That’s clear.
+
+Vijeth: Very clear.
+
+Rakshitha: We just need discipline.
+
+Yuvadharshini: And no last-minute surprises.
+
+Sowmiya S: Exactly. If we follow this timeline strictly, we’ll deliver a stable, polished project without stress. Let’s commit to these deadlines seriously. Meeting adjourned.

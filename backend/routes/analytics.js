@@ -3,9 +3,10 @@ const auth = require('../middleware/auth');
 const Analysis = require('../models/Analysis');
 
 const router = express.Router();
+router.use(auth);
 
 // ─── GET /api/analytics/overview ────────────────────────────────────────────
-router.get('/overview', auth, async (req, res) => {
+router.get('/overview', async (req, res) => {
   try {
     const userId = req.user._id;
 
@@ -63,7 +64,7 @@ router.get('/overview', auth, async (req, res) => {
 });
 
 // ─── GET /api/analytics/trends ──────────────────────────────────────────────
-router.get('/trends', auth, async (req, res) => {
+router.get('/trends', async (req, res) => {
   try {
     const userId = req.user._id;
     const { days = 30 } = req.query;
@@ -110,7 +111,7 @@ router.get('/trends', auth, async (req, res) => {
 });
 
 // ─── GET /api/analytics/team-performance ────────────────────────────────────
-router.get('/team-performance', auth, async (req, res) => {
+router.get('/team-performance', async (req, res) => {
   try {
     const userId = req.user._id;
 

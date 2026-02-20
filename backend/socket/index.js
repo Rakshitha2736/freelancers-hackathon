@@ -1,69 +1,78 @@
-const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const auth = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 let io = null;
 
 // Initialize Socket.io
 const initializeSocket = (app) => {
   const server = http.createServer(app);
-  const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    'http://localhost:3000',
-    'http://localhost:3002'
-  ].filter(Boolean);
+  const clientUrl = process.env.CLIENT_URL;
 
   io = new Server(server, {
     cors: {
-      origin: allowedOrigins,
+      origin: clientUrl || true,
       methods: ['GET', 'POST']
     }
   });
 
   // Middleware for socket authentication
   io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+    const token = socket.handshake?.auth?.token;
     if (!token) {
       return next(new Error('Authentication required'));
     }
-    // Token verification would happen here
-    socket.userId = socket.handshake.auth.userId;
-    next();
+
+    if (!process.env.JWT_SECRET) {
+      return next(new Error('Server authentication is not configured'));
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (!decoded || !decoded.id) {
+        return next(new Error('Invalid authentication token'));
+      }
+
+      socket.user = decoded;
+      return next();
+    } catch (error) {
+      return next(new Error('Invalid or expired token'));
+    }
   });
 
   // Connection handling
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.userId}`);
+    const userId = socket.user.id.toString();
+    console.log(`User connected: ${userId}`);
 
     // User joins their personal room
-    socket.join(`user:${socket.userId}`);
+    socket.join(userId);
 
     // Task update event
     socket.on('task:update', (data) => {
       // Broadcast to all connected clients of this user
-      io.to(`user:${socket.userId}`).emit('task:updated', data);
+      io.to(userId).emit('task:updated', data);
     });
 
     // Analysis confirmation event
     socket.on('analysis:confirm', (data) => {
-      io.to(`user:${socket.userId}`).emit('analysis:confirmed', data);
+      io.to(userId).emit('analysis:confirmed', data);
     });
 
     // Real-time typing indicator
     socket.on('task:editing', (data) => {
-      io.to(`user:${socket.userId}`).emit('task:being_edited', data);
+      io.to(userId).emit('task:being_edited', data);
     });
 
     // Presence event
     socket.on('presence:online', () => {
-      io.to(`user:${socket.userId}`).emit('user:online', { userId: socket.userId });
+      io.to(userId).emit('user:online', { userId });
     });
 
     // Disconnect
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.userId}`);
-      io.to(`user:${socket.userId}`).emit('user:offline', { userId: socket.userId });
+      console.log(`User disconnected: ${userId}`);
+      io.to(userId).emit('user:offline', { userId });
     });
   });
 
@@ -73,14 +82,14 @@ const initializeSocket = (app) => {
 // Emit task update to user
 const emitTaskUpdate = (userId, data) => {
   if (io) {
-    io.to(`user:${userId}`).emit('task:updated', data);
+    io.to(userId.toString()).emit('task:updated', data);
   }
 };
 
 // Emit analysis update to user
 const emitAnalysisUpdate = (userId, data) => {
   if (io) {
-    io.to(`user:${userId}`).emit('analysis:updated', data);
+    io.to(userId.toString()).emit('analysis:updated', data);
   }
 };
 

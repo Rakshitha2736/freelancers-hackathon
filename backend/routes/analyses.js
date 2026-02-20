@@ -1,12 +1,17 @@
 const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { body, param } = require('express-validator');
 const auth = require('../middleware/auth');
+const { analysisRateLimiter } = require('../middleware/security');
+const { handleValidationErrors } = require('../middleware/validation');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
 const { chunkText, mergeChunkResults, estimateProcessingTime } = require('../utils/textChunker');
 const { emitAnalysisUpdate } = require('../socket');
 
 const router = express.Router();
+router.use(auth);
+router.use(analysisRateLimiter);
 
 // Initialize Gemini client with validation
 if (!process.env.GEMINI_API_KEY) {
@@ -174,7 +179,22 @@ ${chunkText.trim()}
 }
 
 // ─── POST /api/analyses/generate ────────────────────────────────────────────
-router.post('/generate', auth, async (req, res) => {
+router.post(
+  '/generate',
+  [
+    body('rawText').isString().trim().isLength({ min: 50 }),
+    body('meetingMetadata').optional().isObject(),
+    body('meetingMetadata.title').optional().isString().trim(),
+    body('meetingMetadata.date').optional().isISO8601(),
+    body('meetingMetadata.participants').optional().isArray(),
+    body('meetingMetadata.meetingType')
+      .optional()
+      .isIn(['Standup', 'Planning', 'Review', 'Retrospective', '1:1', 'Other']),
+    body('meetingMetadata.location').optional().isString().trim(),
+    body('meetingMetadata.duration').optional().isInt({ min: 0 }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { rawText } = req.body;
     console.log('[Generate] Request received, rawText length:', rawText?.length);
@@ -245,11 +265,11 @@ router.post('/generate', auth, async (req, res) => {
     
     res.status(500).json({ message: 'Failed to generate summary. Please try again.' });
   }
-});
+  });
 
 // ─── GET /api/analyses/search ───────────────────────────────────────────────
 // IMPORTANT: Must be BEFORE /:id route to prevent "search" being treated as an ID
-router.get('/search', auth, async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
     const { q, meetingType, dateFrom, dateTo } = req.query;
 
@@ -315,7 +335,7 @@ router.get('/search', auth, async (req, res) => {
 });
 
 // ─── GET /api/analyses/:id ──────────────────────────────────────────────────
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const analysis = await Analysis.findOne({
       _id: req.params.id,
@@ -337,7 +357,11 @@ router.get('/:id', auth, async (req, res) => {
 const ANALYZE_COOLDOWN_MS = 60000;
 const analyzeCooldowns = new Map();
 
-router.post('/:id/analyze', auth, async (req, res) => {
+router.post(
+  '/:id/analyze',
+  [param('id').isMongoId()],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const userId = req.user._id.toString();
     const lastAt = analyzeCooldowns.get(userId);
@@ -414,7 +438,21 @@ router.post('/:id/analyze', auth, async (req, res) => {
 });
 
 // ─── PATCH /api/analyses/:id ────────────────────────────────────────────────
-router.patch('/:id', auth, async (req, res) => {
+router.patch(
+  '/:id',
+  [
+    param('id').isMongoId(),
+    body('summary').optional().isString(),
+    body('decisions').optional().isArray(),
+    body('tasks').optional().isArray(),
+    body('tasks.*.description').optional().isString(),
+    body('tasks.*.owner').optional().isString(),
+    body('tasks.*.deadline').optional().isISO8601(),
+    body('tasks.*.priority').optional().isIn(['High', 'Medium', 'Low']),
+    body('tasks.*.status').optional().isIn(['Pending', 'In Progress', 'Completed']),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const analysis = await Analysis.findOne({
       _id: req.params.id,
@@ -467,7 +505,21 @@ router.patch('/:id', auth, async (req, res) => {
 });
 
 // ─── POST /api/analyses/:id/confirm ─────────────────────────────────────────
-router.post('/:id/confirm', auth, async (req, res) => {
+router.post(
+  '/:id/confirm',
+  [
+    param('id').isMongoId(),
+    body('summary').optional().isString(),
+    body('decisions').optional().isArray(),
+    body('tasks').optional().isArray(),
+    body('tasks.*.description').optional().isString(),
+    body('tasks.*.owner').optional().isString(),
+    body('tasks.*.deadline').optional().isISO8601(),
+    body('tasks.*.priority').optional().isIn(['High', 'Medium', 'Low']),
+    body('tasks.*.status').optional().isIn(['Pending', 'In Progress', 'Completed']),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const analysis = await Analysis.findOne({
       _id: req.params.id,

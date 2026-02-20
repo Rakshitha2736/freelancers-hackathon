@@ -4,11 +4,12 @@ import io from 'socket.io-client';
 export const useSocket = (userId) => {
   const [connected, setConnected] = useState(false);
   const socketRef = useRef(null);
+  const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
 
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001', {
+    const socket = io(SOCKET_URL, {
       auth: {
         token: localStorage.getItem('token'),
         userId
@@ -38,7 +39,7 @@ export const useSocket = (userId) => {
     return () => {
       socket.disconnect();
     };
-  }, [userId]);
+  }, [userId, SOCKET_URL]);
 
   const emit = (event, data) => {
     if (socketRef.current?.connected) {

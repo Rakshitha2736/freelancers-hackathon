@@ -1,10 +1,13 @@
 const express = require('express');
+const { body, param } = require('express-validator');
 const auth = require('../middleware/auth');
+const { handleValidationErrors } = require('../middleware/validation');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
 const { emitTaskUpdate } = require('../socket');
 
 const router = express.Router();
+router.use(auth);
 
 // ─── Owner Mapping Helper ───────────────────────────────────────────────────
 async function mapOwner(ownerName) {
@@ -24,7 +27,7 @@ async function mapOwner(ownerName) {
 }
 
 // ─── GET /api/tasks ─────────────────────────────────────────────────────────
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { mine, myTasksOnly, owner, priority, status, meetingType, dateFrom, dateTo } = req.query;
 
@@ -91,7 +94,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // ─── GET /api/tasks/metrics ─────────────────────────────────────────────────
-router.get('/metrics', auth, async (req, res) => {
+router.get('/metrics', async (req, res) => {
   try {
     const analyses = await Analysis.find({
       userId: req.user._id,
@@ -122,7 +125,27 @@ router.get('/metrics', auth, async (req, res) => {
 });
 
 // ─── PATCH /api/tasks/:analysisId/:taskId ───────────────────────────────────
-router.patch('/:analysisId/:taskId', auth, async (req, res) => {
+router.patch(
+  '/:analysisId/:taskId',
+  [
+    param('analysisId').isMongoId(),
+    param('taskId').isMongoId(),
+    body().isObject(),
+    body().custom((value) => {
+      const allowedFields = ['owner', 'status', 'priority', 'deadline'];
+      const hasUpdatableField = allowedFields.some((field) => value[field] !== undefined);
+      if (!hasUpdatableField) {
+        throw new Error('At least one updatable task field is required');
+      }
+      return true;
+    }),
+    body('owner').optional().isString().trim().isLength({ max: 100 }),
+    body('status').optional().isIn(['Pending', 'In Progress', 'Completed']),
+    body('priority').optional().isIn(['High', 'Medium', 'Low']),
+    body('deadline').optional().isISO8601(),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { analysisId, taskId } = req.params;
 

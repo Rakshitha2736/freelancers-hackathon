@@ -1,11 +1,14 @@
 const express = require('express');
+const { body, param } = require('express-validator');
 const auth = require('../middleware/auth');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const { apiLimiter } = require('../middleware/security');
+const { handleValidationErrors } = require('../middleware/validation');
 
 const router = express.Router();
+router.use(auth);
 
 // Create schemas inline since we're registering them here
 const permissionSchema = new mongoose.Schema({
@@ -41,7 +44,16 @@ const Comment = mongoose.model('Comment', commentSchema);
 const Activity = mongoose.model('Activity', activitySchema);
 
 // Share analysis with user
-router.post('/:analysisId/share', apiLimiter, auth, async (req, res) => {
+router.post(
+  '/:analysisId/share',
+  apiLimiter,
+  [
+    param('analysisId').isMongoId(),
+    body('email').trim().isEmail().normalizeEmail(),
+    body('role').optional().isIn(['Viewer', 'Editor', 'Owner']),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { email, role } = req.body;
     const { analysisId } = req.params;
@@ -97,7 +109,7 @@ router.post('/:analysisId/share', apiLimiter, auth, async (req, res) => {
 });
 
 // Get users this analysis is shared with
-router.get('/:analysisId/shared-with', auth, async (req, res) => {
+router.get('/:analysisId/shared-with', async (req, res) => {
   try {
     const { analysisId } = req.params;
 
@@ -112,7 +124,17 @@ router.get('/:analysisId/shared-with', auth, async (req, res) => {
 });
 
 // Add comment to analysis
-router.post('/:analysisId/comments', apiLimiter, auth, async (req, res) => {
+router.post(
+  '/:analysisId/comments',
+  apiLimiter,
+  [
+    param('analysisId').isMongoId(),
+    body('content').isString().trim().notEmpty().isLength({ max: 2000 }),
+    body('taskId').optional({ nullable: true }).isMongoId(),
+    body('mentions').optional().isArray(),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { content, taskId, mentions } = req.body;
     const { analysisId } = req.params;
@@ -146,7 +168,7 @@ router.post('/:analysisId/comments', apiLimiter, auth, async (req, res) => {
 });
 
 // Get comments for analysis
-router.get('/:analysisId/comments', auth, async (req, res) => {
+router.get('/:analysisId/comments', async (req, res) => {
   try {
     const { analysisId } = req.params;
     const { taskId } = req.query;
@@ -166,7 +188,7 @@ router.get('/:analysisId/comments', auth, async (req, res) => {
 });
 
 // Get activity feed
-router.get('/:analysisId/activity', auth, async (req, res) => {
+router.get('/:analysisId/activity', async (req, res) => {
   try {
     const { analysisId } = req.params;
 
@@ -182,7 +204,7 @@ router.get('/:analysisId/activity', auth, async (req, res) => {
 });
 
 // Remove share permission
-router.delete('/:analysisId/share/:userId', auth, async (req, res) => {
+router.delete('/:analysisId/share/:userId', async (req, res) => {
   try {
     const { analysisId, userId } = req.params;
 

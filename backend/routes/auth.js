@@ -1,7 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { body } = require('express-validator');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { authStrictLimiter } = require('../middleware/security');
+const { handleValidationErrors } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -10,7 +13,16 @@ const generateToken = (id) => {
 };
 
 // POST /api/auth/signup
-router.post('/signup', async (req, res) => {
+router.post(
+  '/signup',
+  authStrictLimiter,
+  [
+    body('name').trim().notEmpty().isLength({ min: 3 }),
+    body('email').trim().isEmail().normalizeEmail(),
+    body('password').isString().isLength({ min: 6 }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -53,7 +65,15 @@ router.post('/signup', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post(
+  '/login',
+  authStrictLimiter,
+  [
+    body('email').trim().isEmail().normalizeEmail(),
+    body('password').isString().notEmpty(),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
   try {
     const { email, password } = req.body;
 
