@@ -109,6 +109,7 @@ export const analyzeExisting = (id) => API.post(`/analyses/${id}/analyze`, {}, {
 // Tasks
 export const getTasks = (params) => API.get('/tasks', { params });
 export const getMeetings = () => API.get('/tasks/meetings');
+export const deleteMeeting = (meetingId) => API.delete(`/tasks/meetings/${meetingId}`);
 export const updateTask = (analysisId, taskId, data) => API.patch(`/tasks/${analysisId}/${taskId}`, data);
 export const getMetrics = () => API.get('/tasks/metrics');
 

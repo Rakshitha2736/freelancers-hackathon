@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import MeetingFilterList from '../components/MeetingFilterList';
 import useSocket from '../hooks/useSocket';
-import { getTasks, updateTask, getMeetings } from '../services/api';
+import { getTasks, updateTask, getMeetings, deleteMeeting } from '../services/api';
 
 const Kanban = () => {
   const navigate = useNavigate();
@@ -180,20 +180,28 @@ const Kanban = () => {
   };
 
   // Handle meeting deletion
-  const handleDeleteMeeting = useCallback((meetingId) => {
-    // Remove meeting from meetings list
-    setMeetings((prev) => prev.filter((m) => m._id !== meetingId));
+  const handleDeleteMeeting = useCallback(async (meetingId) => {
+    try {
+      // Delete meeting from database
+      await deleteMeeting(meetingId);
 
-    // Remove all tasks associated with this meeting
-    setTasks((prev) => ({
-      pending: prev.pending.filter((task) => task.meetingId !== meetingId),
-      inProgress: prev.inProgress.filter((task) => task.meetingId !== meetingId),
-      completed: prev.completed.filter((task) => task.meetingId !== meetingId),
-    }));
+      // Remove meeting from meetings list
+      setMeetings((prev) => prev.filter((m) => m._id !== meetingId));
 
-    // Reset selected meeting if it was the deleted one
-    if (selectedMeetingId === meetingId) {
-      setSelectedMeetingId(null);
+      // Remove all tasks associated with this meeting
+      setTasks((prev) => ({
+        pending: prev.pending.filter((task) => task.meetingId !== meetingId),
+        inProgress: prev.inProgress.filter((task) => task.meetingId !== meetingId),
+        completed: prev.completed.filter((task) => task.meetingId !== meetingId),
+      }));
+
+      // Reset selected meeting if it was the deleted one
+      if (selectedMeetingId === meetingId) {
+        setSelectedMeetingId(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete meeting:', err);
+      setError('Failed to delete meeting. Please try again.');
     }
   }, [selectedMeetingId]);
 

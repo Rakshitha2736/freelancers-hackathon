@@ -6,7 +6,7 @@ import MetricsCards from '../components/MetricsCards';
 import TaskTable from '../components/TaskTable';
 import MeetingFilterList from '../components/MeetingFilterList';
 import useSocket from '../hooks/useSocket';
-import { getTasks, getMetrics, updateTask, searchAnalyses, getMeetings } from '../services/api';
+import { getTasks, getMetrics, updateTask, searchAnalyses, getMeetings, deleteMeeting } from '../services/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -307,16 +307,24 @@ const Dashboard = () => {
     setMetrics(computedMetrics);
   }, [computedMetrics]);
 
-  const handleDeleteMeeting = useCallback((meetingId) => {
-    // Remove meeting from meetings list
-    setMeetings((prev) => prev.filter((m) => m._id !== meetingId));
+  const handleDeleteMeeting = useCallback(async (meetingId) => {
+    try {
+      // Delete meeting from database
+      await deleteMeeting(meetingId);
 
-    // Remove all tasks associated with this meeting
-    setTasks((prev) => prev.filter((task) => task.meetingId !== meetingId));
+      // Remove meeting from meetings list
+      setMeetings((prev) => prev.filter((m) => m._id !== meetingId));
 
-    // Reset selected meeting if it was the deleted one
-    if (selectedMeetingId === meetingId) {
-      setSelectedMeetingId(null);
+      // Remove all tasks associated with this meeting
+      setTasks((prev) => prev.filter((task) => task.meetingId !== meetingId));
+
+      // Reset selected meeting if it was the deleted one
+      if (selectedMeetingId === meetingId) {
+        setSelectedMeetingId(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete meeting:', err);
+      setError('Failed to delete meeting. Please try again.');
     }
   }, [selectedMeetingId]);
 

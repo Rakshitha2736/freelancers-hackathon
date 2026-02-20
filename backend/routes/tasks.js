@@ -151,6 +151,38 @@ router.get('/meetings', auth, async (req, res) => {
   }
 });
 
+// ─── DELETE /api/tasks/meetings/:meetingId ──────────────────────────────────
+router.delete(
+  '/meetings/:meetingId',
+  [param('meetingId').isMongoId()],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const { meetingId } = req.params;
+
+      // Find and delete the analysis (meeting) document
+      const analysis = await Analysis.findOneAndDelete({
+        _id: meetingId,
+        userId: req.user._id,
+      });
+
+      if (!analysis) {
+        return res.status(404).json({ message: 'Meeting not found.' });
+      }
+
+      const taskCount = analysis.tasks?.length || 0;
+
+      res.json({ 
+        message: 'Meeting and all related tasks deleted successfully.',
+        deletedTaskCount: taskCount,
+      });
+    } catch (err) {
+      console.error('Delete meeting error:', err);
+      res.status(500).json({ message: 'Failed to delete meeting.' });
+    }
+  }
+);
+
 // ─── PATCH /api/tasks/:analysisId/:taskId ───────────────────────────────────
 router.patch(
   '/:analysisId/:taskId',
