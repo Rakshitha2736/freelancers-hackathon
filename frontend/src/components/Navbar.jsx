@@ -51,6 +51,15 @@ const Navbar = () => {
             Dashboard
           </Link>
           <Link
+            to="/summarize"
+            className={`nav-link ${isActive('/summarize') ? 'active' : ''}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm4 1a1 1 0 000 2h4a1 1 0 100-2H6zM6 7a1 1 0 000 2h4a1 1 0 100-2H6zm0 4a1 1 0 000 2h2a1 1 0 100-2H6z"/>
+            </svg>
+            Summarize
+          </Link>
+          <Link
             to="/kanban"
             className={`nav-link ${isActive('/kanban') ? 'active' : ''}`}
           >
@@ -67,15 +76,6 @@ const Navbar = () => {
               <path d="M0 0h1v15h15v1H0V0zm14.817 11.887a.5.5 0 00.07-.704l-4.5-5.5a.5.5 0 00-.74-.037L7 8.5 4 5.5 3.5 6l3.5 3.5 3.354-3.354 4.146 5.037a.5.5 0 00.704.07z"/>
             </svg>
             Analytics
-          </Link>
-          <Link
-            to="/summarize"
-            className={`nav-link ${isActive('/summarize') ? 'active' : ''}`}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm4 1a1 1 0 000 2h4a1 1 0 100-2H6zM6 7a1 1 0 000 2h4a1 1 0 100-2H6zm0 4a1 1 0 000 2h2a1 1 0 100-2H6z"/>
-            </svg>
-            Summarize
           </Link>
         </div>
 

@@ -3,13 +3,20 @@ export const exportToPDF = async (analysis, options = {}) => {
   const filename = options.filename || 'analysis.pdf';
   const currentUser = options.currentUser || null;
 
-  const { jsPDF } = await import('jspdf');
+  const [{ jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
+  const autoTable = autoTableModule.default || autoTableModule;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
   const maxWidth = pageWidth - margin * 2;
-  let y = margin;
+  let yPosition = margin;
+  const sectionSpacing = 20;
+  const paragraphLineHeight = 16;
+  const paragraphSpacing = 8;
 
   const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
@@ -30,38 +37,42 @@ export const exportToPDF = async (analysis, options = {}) => {
   };
 
   const addPageIfNeeded = (extra = 0) => {
-    if (y + extra > pageHeight - margin) {
+    if (yPosition + extra > pageHeight - margin) {
       doc.addPage();
-      y = margin;
+      yPosition = margin;
     }
   };
 
   const addTitle = (text) => {
-    addPageIfNeeded(28);
+    addPageIfNeeded(36);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text(text, margin, y);
-    y += 22;
+    doc.setFontSize(20);
+    doc.text(text, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 14;
   };
 
   const addHeading = (text) => {
     addPageIfNeeded(24);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text(text, margin, y);
-    y += 18;
+    doc.setFontSize(15);
+    doc.text(text, margin, yPosition);
+    yPosition += 18;
   };
 
   const addParagraph = (text) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     const lines = doc.splitTextToSize(text || '', maxWidth);
     lines.forEach((line) => {
-      addPageIfNeeded(14);
-      doc.text(line, margin, y);
-      y += 14;
+      addPageIfNeeded(paragraphLineHeight);
+      doc.text(line, margin, yPosition);
+      yPosition += paragraphLineHeight;
     });
-    y += 6;
+    yPosition += paragraphSpacing;
   };
 
   const addList = (items) => {
@@ -73,12 +84,12 @@ export const exportToPDF = async (analysis, options = {}) => {
       const prefix = `${index + 1}. `;
       const lines = doc.splitTextToSize(`${prefix}${item}`, maxWidth);
       lines.forEach((line) => {
-        addPageIfNeeded(14);
-        doc.text(line, margin, y);
-        y += 14;
+        addPageIfNeeded(paragraphLineHeight);
+        doc.text(line, margin, yPosition);
+        yPosition += paragraphLineHeight;
       });
     });
-    y += 6;
+    yPosition += paragraphSpacing;
   };
 
   const addTasks = (tasks) => {
@@ -87,17 +98,52 @@ export const exportToPDF = async (analysis, options = {}) => {
       return;
     }
 
-    tasks.forEach((task, index) => {
-      const owner = task.owner || 'Unassigned';
-      const line = `${index + 1}. ${task.description || ''} | ${owner} | ${formatDate(task.deadline)} | ${task.priority || 'Medium'} | ${task.status || 'Pending'}`;
-      const lines = doc.splitTextToSize(line, maxWidth);
-      lines.forEach((l) => {
-        addPageIfNeeded(14);
-        doc.text(l, margin, y);
-        y += 14;
-      });
+    const rows = tasks.map((task, index) => ([
+      String(index + 1),
+      task.description || '',
+      task.owner || 'Unassigned',
+      formatDate(task.deadline),
+      task.priority || 'Medium',
+      task.status || 'Pending'
+    ]));
+
+    autoTable(doc, {
+      startY: yPosition,
+      margin: { left: margin, right: margin },
+      tableWidth: 'auto',
+      theme: 'grid',
+      head: [['#', 'Task', 'Owner', 'Deadline', 'Priority', 'Status']],
+      body: rows,
+      styles: {
+        font: 'helvetica',
+        fontSize: 10,
+        cellPadding: 6,
+        overflow: 'linebreak',
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [235, 235, 235],
+        textColor: 20,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [248, 248, 248]
+      },
+      columnStyles: {
+        0: { cellWidth: 24 },
+        2: { cellWidth: 90 },
+        3: { cellWidth: 72 },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 60 }
+      },
+      didDrawPage: (data) => {
+        yPosition = data.cursor.y;
+      }
     });
-    y += 6;
+
+    yPosition = (doc.lastAutoTable && doc.lastAutoTable.finalY)
+      ? doc.lastAutoTable.finalY + 6
+      : yPosition + 6;
   };
 
   const allTasks = Array.isArray(analysis.tasks) ? analysis.tasks : [];
@@ -106,12 +152,13 @@ export const exportToPDF = async (analysis, options = {}) => {
 
   addTitle('Meeting Analysis');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Exported: ${new Date().toLocaleString()}`, margin, y);
-  y += 16;
+  doc.setFontSize(11);
+  doc.text(`Exported: ${new Date().toLocaleString()}`, margin, yPosition);
+  yPosition += 16;
 
   addHeading('Executive Summary');
   addParagraph(analysis.summary || 'No summary available');
+  yPosition += sectionSpacing;
 
   addHeading('Meeting Details');
   const meetingDetails = [
@@ -122,16 +169,33 @@ export const exportToPDF = async (analysis, options = {}) => {
     Number.isFinite(meeting.duration) ? `Duration: ${meeting.duration} minutes` : null
   ].filter(Boolean);
   addList(meetingDetails);
+  yPosition += sectionSpacing;
 
   addHeading('Key Decisions');
   addList(Array.isArray(analysis.decisions) ? analysis.decisions : []);
+  yPosition += sectionSpacing;
 
   addHeading('All Tasks');
   addTasks(allTasks);
+  yPosition += sectionSpacing;
 
   const userLabel = currentUser?.name ? `Your Tasks (${currentUser.name})` : 'Your Tasks';
   addHeading(userLabel);
   addTasks(userTasks);
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i += 1) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+      `Page ${i} of ${totalPages}`,
+      pageWidth - margin,
+      pageHeight - 18,
+      { align: 'right' }
+    );
+  }
 
   doc.save(filename);
 };
