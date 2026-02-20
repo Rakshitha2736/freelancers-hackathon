@@ -1,92 +1,15 @@
-// Export analysis to JSON
-export const exportToJSON = (analysis, filename = 'analysis.json') => {
-  const data = {
-    summary: analysis.summary,
-    decisions: analysis.decisions,
-    tasks: analysis.tasks,
-    metadata: analysis.metadata,
-    exportedAt: new Date().toISOString()
-  };
-  
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  downloadFile(blob, filename);
-};
-
-// Export analysis to CSV
-export const exportToCSV = (analysis, filename = 'analysis.csv') => {
-  let csv = 'Summary\n';
-  csv += '"' + (analysis.summary || '').replace(/"/g, '""') + '"\n\n';
-  
-  csv += 'Decisions\n';
-  if (analysis.decisions?.length > 0) {
-    analysis.decisions.forEach(d => {
-      csv += '"' + (d || '').replace(/"/g, '""') + '"\n';
-    });
-  }
-  csv += '\n';
-  
-  csv += 'Tasks\n';
-  csv += 'Description,Owner,Deadline,Priority,Status\n';
-  if (analysis.tasks?.length > 0) {
-    analysis.tasks.forEach(t => {
-      csv += `"${(t.description || '').replace(/"/g, '""')}","${(t.owner || '').replace(/"/g, '""')}","${t.deadline || ''}","${t.priority || ''}","${t.status || ''}"\n`;
-    });
-  }
-  
-  const blob = new Blob([csv], { type: 'text/csv' });
-  downloadFile(blob, filename);
-};
-
-// Export analysis to Markdown
-export const exportToMarkdown = (analysis, filename = 'analysis.md') => {
-  let md = '# Meeting Analysis\n\n';
-  
-  md += '## Executive Summary\n\n';
-  md += (analysis.summary || 'No summary available') + '\n\n';
-  
-  md += '## Key Decisions\n\n';
-  if (analysis.decisions?.length > 0) {
-    analysis.decisions.forEach((d, i) => {
-      md += `${i + 1}. ${d}\n`;
-    });
-  } else {
-    md += '- No decisions recorded\n';
-  }
-  md += '\n';
-  
-  md += '## Tasks\n\n';
-  if (analysis.tasks?.length > 0) {
-    md += '| Task | Owner | Deadline | Priority | Status |\n';
-    md += '|------|-------|----------|----------|--------|\n';
-    analysis.tasks.forEach(t => {
-      md += `| ${t.description || ''} | ${t.owner || 'Unassigned'} | ${t.deadline || 'N/A'} | ${t.priority || 'Medium'} | ${t.status || 'Pending'} |\n`;
-    });
-  } else {
-    md += 'No tasks extracted.\n';
-  }
-  md += '\n';
-  
-  md += `*Exported: ${new Date().toLocaleString()}*\n`;
-  
-  const blob = new Blob([md], { type: 'text/markdown' });
-  downloadFile(blob, filename);
-};
-
 // Export analysis to PDF (via browser print)
-export const exportToPDF = (analysis, options = {}) => {
+export const exportToPDF = async (analysis, options = {}) => {
   const filename = options.filename || 'analysis.pdf';
   const currentUser = options.currentUser || null;
 
-  const escapeHtml = (value) => {
-    const str = value == null ? '' : String(value);
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  };
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const maxWidth = pageWidth - margin * 2;
+  let y = margin;
 
   const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
@@ -106,121 +29,111 @@ export const exportToPDF = (analysis, options = {}) => {
     return false;
   };
 
-  const allTasks = Array.isArray(analysis.tasks) ? analysis.tasks : [];
-  const userTasks = allTasks.filter(isMyTask);
-
-  const buildTasksTable = (tasks) => {
-    if (!tasks.length) {
-      return '<p class="muted">No tasks available.</p>';
+  const addPageIfNeeded = (extra = 0) => {
+    if (y + extra > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
     }
-    return `
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Description</th>
-            <th>Owner</th>
-            <th>Deadline</th>
-            <th>Priority</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${tasks.map((t, i) => {
-            const owner = t.owner || 'Unassigned';
-            return `
-              <tr>
-                <td>${i + 1}</td>
-                <td>${escapeHtml(t.description || '')}</td>
-                <td>${escapeHtml(owner)}</td>
-                <td>${escapeHtml(formatDate(t.deadline))}</td>
-                <td>${escapeHtml(t.priority || 'Medium')}</td>
-                <td>${escapeHtml(t.status || 'Pending')}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    `;
   };
 
+  const addTitle = (text) => {
+    addPageIfNeeded(28);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text(text, margin, y);
+    y += 22;
+  };
+
+  const addHeading = (text) => {
+    addPageIfNeeded(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(text, margin, y);
+    y += 18;
+  };
+
+  const addParagraph = (text) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const lines = doc.splitTextToSize(text || '', maxWidth);
+    lines.forEach((line) => {
+      addPageIfNeeded(14);
+      doc.text(line, margin, y);
+      y += 14;
+    });
+    y += 6;
+  };
+
+  const addList = (items) => {
+    if (!items.length) {
+      addParagraph('No items recorded.');
+      return;
+    }
+    items.forEach((item, index) => {
+      const prefix = `${index + 1}. `;
+      const lines = doc.splitTextToSize(`${prefix}${item}`, maxWidth);
+      lines.forEach((line) => {
+        addPageIfNeeded(14);
+        doc.text(line, margin, y);
+        y += 14;
+      });
+    });
+    y += 6;
+  };
+
+  const addTasks = (tasks) => {
+    if (!tasks.length) {
+      addParagraph('No tasks available.');
+      return;
+    }
+
+    tasks.forEach((task, index) => {
+      const owner = task.owner || 'Unassigned';
+      const line = `${index + 1}. ${task.description || ''} | ${owner} | ${formatDate(task.deadline)} | ${task.priority || 'Medium'} | ${task.status || 'Pending'}`;
+      const lines = doc.splitTextToSize(line, maxWidth);
+      lines.forEach((l) => {
+        addPageIfNeeded(14);
+        doc.text(l, margin, y);
+        y += 14;
+      });
+    });
+    y += 6;
+  };
+
+  const allTasks = Array.isArray(analysis.tasks) ? analysis.tasks : [];
+  const userTasks = allTasks.filter(isMyTask);
   const meeting = analysis.meetingMetadata || {};
+
+  addTitle('Meeting Analysis');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`Exported: ${new Date().toLocaleString()}`, margin, y);
+  y += 16;
+
+  addHeading('Executive Summary');
+  addParagraph(analysis.summary || 'No summary available');
+
+  addHeading('Meeting Details');
   const meetingDetails = [
-    meeting.title ? `Title: ${escapeHtml(meeting.title)}` : null,
-    meeting.date ? `Date: ${escapeHtml(formatDate(meeting.date))}` : null,
-    meeting.meetingType ? `Type: ${escapeHtml(meeting.meetingType)}` : null,
-    meeting.location ? `Location: ${escapeHtml(meeting.location)}` : null,
+    meeting.title ? `Title: ${meeting.title}` : null,
+    meeting.date ? `Date: ${formatDate(meeting.date)}` : null,
+    meeting.meetingType ? `Type: ${meeting.meetingType}` : null,
+    meeting.location ? `Location: ${meeting.location}` : null,
     Number.isFinite(meeting.duration) ? `Duration: ${meeting.duration} minutes` : null
   ].filter(Boolean);
+  addList(meetingDetails);
 
-  const decisions = Array.isArray(analysis.decisions) ? analysis.decisions : [];
+  addHeading('Key Decisions');
+  addList(Array.isArray(analysis.decisions) ? analysis.decisions : []);
 
-  const html = `
-    <html>
-      <head>
-        <title>${escapeHtml(filename)}</title>
-        <style>
-          body { font-family: Arial, sans-serif; color: #111827; margin: 24px; }
-          h1 { margin: 0 0 8px 0; font-size: 24px; }
-          h2 { margin: 24px 0 8px 0; font-size: 18px; }
-          p { margin: 8px 0; }
-          .meta { color: #6b7280; font-size: 12px; margin-bottom: 16px; }
-          .muted { color: #6b7280; }
-          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-          th, td { border: 1px solid #e5e7eb; padding: 8px; text-align: left; font-size: 12px; }
-          th { background: #f9fafb; }
-          .pill { display: inline-block; background: #eff6ff; color: #2563eb; padding: 2px 8px; border-radius: 12px; font-size: 11px; }
-        </style>
-      </head>
-      <body>
-        <h1>Meeting Analysis</h1>
-        <div class="meta">Exported: ${escapeHtml(new Date().toLocaleString())}</div>
+  addHeading('All Tasks');
+  addTasks(allTasks);
 
-        <h2>Executive Summary</h2>
-        <p>${escapeHtml(analysis.summary || 'No summary available')}</p>
+  const userLabel = currentUser?.name ? `Your Tasks (${currentUser.name})` : 'Your Tasks';
+  addHeading(userLabel);
+  addTasks(userTasks);
 
-        <h2>Meeting Details</h2>
-        ${meetingDetails.length ? `
-          <ul>
-            ${meetingDetails.map((d) => `<li>${d}</li>`).join('')}
-          </ul>
-        ` : '<p class="muted">No meeting details available.</p>'}
-
-        <h2>Key Decisions</h2>
-        ${decisions.length ? `
-          <ol>
-            ${decisions.map((d) => `<li>${escapeHtml(d)}</li>`).join('')}
-          </ol>
-        ` : '<p class="muted">No decisions recorded.</p>'}
-
-        <h2>All Tasks</h2>
-        ${buildTasksTable(allTasks)}
-
-        <h2>Your Tasks ${currentUser?.name ? `<span class="pill">${escapeHtml(currentUser.name)}</span>` : ''}</h2>
-        ${buildTasksTable(userTasks)}
-      </body>
-    </html>
-  `;
-
-  const win = window.open('', '_blank', 'noopener,noreferrer');
-  if (!win) return;
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
-};
-
-// Helper to trigger download
-const downloadFile = (blob, filename) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  doc.save(filename);
 };
 
 // Draft management

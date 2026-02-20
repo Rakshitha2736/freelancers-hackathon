@@ -88,15 +88,17 @@ const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
         const status = err?.response?.status;
         if (status === 429) {
           const attempt = retryRef.current[data.analysisId] || 0;
+          const retryAfterMs = err?.response?.data?.retryAfterMs;
+          const retryMs = typeof retryAfterMs === 'number' ? retryAfterMs : 30000;
           if (attempt < 1) {
             retryRef.current[data.analysisId] = attempt + 1;
-            setError('AI rate limit reached. Retrying in 20 seconds...');
+            setError(`AI rate limit reached. Retrying in ${Math.ceil(retryMs / 1000)} seconds...`);
             setTimeout(() => {
               analyzeExisting(data.analysisId).catch(retryErr => {
                 console.error('Background analysis retry error:', retryErr);
                 setError('AI rate limit reached. Please try again in a minute.');
               });
-            }, 20000);
+            }, retryMs);
             return;
           }
           setError('AI rate limit reached. Please try again in a minute.');
