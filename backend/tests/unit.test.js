@@ -1,5 +1,6 @@
 const { CacheManager, invalidateCache } = require('../utils/cacheManager');
 const { schemas } = require('../middleware/security');
+const { parseDeadline } = require('../utils/deadlineParser');
 
 describe('CacheManager', () => {
   let cache;
@@ -137,5 +138,100 @@ describe('Cache Invalidation', () => {
     expect(cache.get('user:123')).toBeNull();
     expect(cache.get('user:456')).toBeNull();
     expect(cache.get('task:123')).toBeDefined();
+  });
+});
+
+describe('Deadline Parser', () => {
+  const baseDate = new Date('2026-02-20T10:00:00.000Z'); // Friday
+
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(baseDate);
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  const toDate = (value) => new Date(value);
+  const dayDiff = (a, b) => {
+    const msInDay = 24 * 60 * 60 * 1000;
+    return Math.round((b.getTime() - a.getTime()) / msInDay);
+  };
+
+  test('today resolves to current date', () => {
+    const parsed = toDate(parseDeadline('today'));
+    expect(parsed.toDateString()).toBe(baseDate.toDateString());
+  });
+
+  test('tomorrow resolves to +1 day', () => {
+    const parsed = toDate(parseDeadline('tomorrow'));
+    expect(dayDiff(baseDate, parsed)).toBe(1);
+  });
+
+  test('within two days resolves to +2 days', () => {
+    const parsed = toDate(parseDeadline('within two days'));
+    expect(dayDiff(baseDate, parsed)).toBe(2);
+  });
+
+  test('eod resolves to same-day end of business', () => {
+    const parsed = toDate(parseDeadline('eod'));
+    expect(parsed.toDateString()).toBe(baseDate.toDateString());
+    expect(parsed.getHours()).toBe(17);
+  });
+
+  test('end of day resolves to same-day end of business', () => {
+    const parsed = toDate(parseDeadline('end of day'));
+    expect(parsed.toDateString()).toBe(baseDate.toDateString());
+    expect(parsed.getHours()).toBe(17);
+  });
+
+  test('next week resolves to +7 days', () => {
+    const parsed = toDate(parseDeadline('next week'));
+    expect(dayDiff(baseDate, parsed)).toBe(7);
+  });
+
+  test('end of month resolves to last day of month', () => {
+    const parsed = toDate(parseDeadline('end of month'));
+    expect(parsed.getUTCFullYear()).toBe(2026);
+    expect(parsed.getUTCMonth()).toBe(1); // February
+    expect(parsed.getUTCDate()).toBe(28);
+  });
+
+  test('this weekend resolves to Saturday', () => {
+    const parsed = toDate(parseDeadline('this weekend'));
+    expect(parsed.getDay()).toBe(6);
+  });
+
+  test('next Monday resolves to upcoming Monday', () => {
+    const parsed = toDate(parseDeadline('next Monday'));
+    expect(parsed.getDay()).toBe(1);
+    expect(dayDiff(baseDate, parsed)).toBeGreaterThanOrEqual(3);
+  });
+
+  test('by Wednesday resolves to upcoming Wednesday', () => {
+    const parsed = toDate(parseDeadline('by Wednesday'));
+    expect(parsed.getDay()).toBe(3);
+  });
+
+  test('by Friday evening resolves to Friday evening', () => {
+    const parsed = toDate(parseDeadline('by Friday evening'));
+    expect(parsed.getDay()).toBe(5);
+    expect(parsed.getHours()).toBe(18);
+  });
+
+  test('in the next sprint resolves to +14 days', () => {
+    const parsed = toDate(parseDeadline('in the next sprint'));
+    expect(dayDiff(baseDate, parsed)).toBe(14);
+  });
+
+  test('before release resolves to +7 days', () => {
+    const parsed = toDate(parseDeadline('before release'));
+    expect(dayDiff(baseDate, parsed)).toBe(7);
+  });
+
+  test('returns null when parsing fails', () => {
+    const parsed = parseDeadline('unrecognized phrase');
+    expect(parsed).toBeNull();
   });
 });
