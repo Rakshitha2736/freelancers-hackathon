@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const connectDB = require('./config/db');
 const { initializeSocket } = require('./socket');
-const { securityMiddleware } = require('./middleware/security');
+const { securityMiddleware, apiLimiter } = require('./middleware/security');
 
 const authRoutes = require('./routes/auth');
 const analysisRoutes = require('./routes/analyses');
@@ -13,11 +13,22 @@ const analyticsRoutes = require('./routes/analytics');
 const uploadRoutes = require('./routes/upload');
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL;
+const allowedOrigins = [
+  CLIENT_URL,
+  'http://localhost:3000',
+  'http://localhost:3002'
+].filter(Boolean);
 
 const corsOptions = {
-  origin: CLIENT_URL || true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 };
 
@@ -25,6 +36,7 @@ const corsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(securityMiddleware);
+app.use(apiLimiter);
 app.use(express.json({ limit: '5mb' }));
 
 // Routes

@@ -116,7 +116,7 @@ router.post(
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Upload failed. Please check the file and try again.' });
   }
 });
 

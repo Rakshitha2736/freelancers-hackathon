@@ -429,7 +429,7 @@ router.post(
       return res.status(503).json({ message: 'AI service quota exceeded. Please contact administrator.' });
     }
 
-    return res.status(500).json({ message: 'Failed to generate summary. Please try again.', error: err.message });
+    return res.status(500).json({ message: 'Failed to generate summary. Please try again.' });
   } finally {
     if (req.user?._id) {
       analyzeCooldowns.delete(req.user._id.toString());
