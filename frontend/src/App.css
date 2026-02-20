@@ -2019,3 +2019,58 @@ body {
     display: none; /* Hide username on very small screens */
   }
 }
+/* ========================================
+   DASHBOARD LAYOUT (WITH SIDEBAR)
+   ======================================== */
+.dashboard-container {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  width: 100%;
+}
+
+.dashboard-sidebar {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Responsive: Stack on tablets and below */
+@media (max-width: 1024px) {
+  .dashboard-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .dashboard-sidebar {
+    position: static;
+    top: auto;
+    max-height: none;
+  }
+}
+
+/* Meeting filter sidebar scrollbar */
+.dashboard-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

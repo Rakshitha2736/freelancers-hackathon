@@ -1,0 +1,496 @@
+.meeting-filter-container {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.meeting-filter-container.dark {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.meeting-filter-header {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.meeting-filter-header.dark {
+  border-bottom-color: #374151;
+  background: linear-gradient(135deg, #2d3748 0%, #1f2937 100%);
+}
+
+.meeting-filter-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.meeting-filter-header.dark h3 {
+  color: #f3f4f6;
+}
+
+.btn-clear-filter {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #9ca3af;
+  font-size: 20px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.btn-clear-filter.dark {
+  color: #9ca3af;
+}
+
+.btn-clear-filter:hover {
+  color: #6b7280;
+}
+
+.btn-clear-filter.dark:hover {
+  color: #d1d5db;
+}
+
+.meeting-list {
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.meeting-list.dark {
+  background: #111827;
+}
+
+.meeting-list-loading,
+.meeting-list-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.meeting-filter-container.dark .meeting-list-loading,
+.meeting-filter-container.dark .meeting-list-empty {
+  color: #6b7280;
+  background: #111827;
+}
+
+.meeting-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+/* Meeting Item */
+.meeting-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.meeting-item.light {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.meeting-item.dark {
+  background: #2d3748;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+.meeting-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateX(4px);
+}
+
+.meeting-item.dark:hover {
+  background: #374151;
+  border-color: #6b7280;
+}
+
+.meeting-item.active {
+  background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+  border-color: #a78bfa;
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.2);
+}
+
+.meeting-item.active.dark {
+  background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+  border-color: #7c3aed;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.meeting-item-icon {
+  font-size: 20px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.meeting-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.meeting-item-title {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.meeting-item.dark .meeting-item-title {
+  color: #f3f4f6;
+}
+
+.meeting-item.active .meeting-item-title {
+  color: #6d28d9;
+}
+
+.meeting-item.active.dark .meeting-item-title {
+  color: #e9d5ff;
+}
+
+.meeting-item-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.meeting-item.dark .meeting-item-meta {
+  color: #9ca3af;
+}
+
+.meeting-date {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.meeting-date.dark {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.meeting-type {
+  background: #dbeafe;
+  color: #0c4a6e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.meeting-type.dark {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.task-badge {
+  background: #fee2e2;
+  color: #7f1d1d;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.task-badge.dark {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.meeting-item.active .task-badge {
+  background: #d8b4fe;
+  color: #5b21b6;
+}
+
+.meeting-item.active.dark .task-badge {
+  background: #6b21a8;
+  color: #e9d5ff;
+}
+
+/* Scrollbar styling */
+.meeting-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.meeting-list::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.meeting-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.meeting-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+/* Delete Button */
+.btn-delete-meeting {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 18px;
+  color: #d1d5db;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  margin-left: 8px;
+  z-index: 10;
+}
+
+.btn-delete-meeting.dark {
+  color: #6b7280;
+}
+
+.meeting-item:hover .btn-delete-meeting {
+  opacity: 1;
+  color: #ef4444;
+}
+
+.meeting-item.dark:hover .btn-delete-meeting {
+  opacity: 1;
+  color: #f87171;
+}
+
+.btn-delete-meeting:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  transform: scale(1.1);
+}
+
+.btn-delete-meeting.dark:hover {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+.btn-delete-meeting:active {
+  transform: scale(0.95);
+}
+
+/* Confirmation Modal - Full Screen Overlay */
+.delete-confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.delete-confirmation-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 420px;
+  width: 90%;
+  max-height: 90vh;
+  padding: 28px;
+  animation: slideUp 0.3s ease;
+  position: relative;
+  z-index: 10000;
+}
+
+.delete-confirmation-modal.dark {
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.delete-confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.delete-confirmation-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-confirmation-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.delete-confirmation-modal.dark .delete-confirmation-header h2 {
+  color: #f3f4f6;
+}
+
+.delete-confirmation-body {
+  margin-bottom: 24px;
+}
+
+.delete-confirmation-body.dark p {
+  color: #d1d5db;
+}
+
+.delete-confirmation-body p {
+  margin: 0 0 12px 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.delete-confirmation-body p:last-child {
+  margin-bottom: 0;
+}
+
+.delete-confirmation-warning {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 12px;
+  border-radius: 4px;
+  color: #78350f;
+  font-weight: 500;
+}
+
+.delete-confirmation-warning.dark {
+  background: #451a03;
+  border-left-color: #d97706;
+  color: #fcd34d;
+}
+
+.delete-confirmation-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary.light {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary.dark {
+  background: #374151;
+  color: #f3f4f6;
+  border: 1px solid #4b5563;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.btn-secondary.dark:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: 1px solid #dc2626;
+}
+
+.btn-danger.light {
+  background: #ef4444;
+  color: white;
+  border: 1px solid #dc2626;
+}
+
+.btn-danger.dark {
+  background: #dc2626;
+  color: white;
+  border: 1px solid #b91c1c;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  border-color: #b91c1c;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger.dark:hover {
+  background: #b91c1c;
+  border-color: #991b1b;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger:active {
+  transform: scale(0.98);
+}

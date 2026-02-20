@@ -54,6 +54,8 @@ router.get('/', async (req, res) => {
         tasks.push({
           _id: t._id,
           analysisId: a._id,
+          meetingId: a._id,
+          meetingTitle: a.meetingMetadata?.title || '',
           description: t.description,
           owner: t.owner,
           ownerUserId: t.ownerUserId,
@@ -121,6 +123,31 @@ router.get('/metrics', async (req, res) => {
   } catch (err) {
     console.error('Metrics error:', err);
     res.status(500).json({ message: 'Failed to load metrics.' });
+  }
+});
+
+// ─── GET /api/tasks/meetings ────────────────────────────────────────────────
+router.get('/meetings', auth, async (req, res) => {
+  try {
+    const analyses = await Analysis.find({
+      userId: req.user._id,
+      isConfirmed: true,
+    }).sort({ 'meetingMetadata.date': -1 });
+
+    const meetings = analyses.map(a => ({
+      _id: a._id,
+      meetingId: a._id,
+      title: a.meetingMetadata?.title || 'Untitled Meeting',
+      date: a.meetingMetadata?.date || a.createdAt,
+      meetingType: a.meetingMetadata?.meetingType || 'Other',
+      taskCount: (a.tasks || []).length,
+      confirmedAt: a.confirmedAt,
+    }));
+
+    res.json({ meetings });
+  } catch (err) {
+    console.error('Get meetings error:', err);
+    res.status(500).json({ message: 'Failed to load meetings.' });
   }
 });
 
