@@ -7,6 +7,7 @@ const { handleValidationErrors } = require('../middleware/validation');
 const Analysis = require('../models/Analysis');
 const User = require('../models/User');
 const { chunkText, mergeChunkResults, estimateProcessingTime } = require('../utils/textChunker');
+const { parseDeadline } = require('../utils/deadlineParser');
 const { emitAnalysisUpdate } = require('../socket');
 
 const router = express.Router();
@@ -47,42 +48,6 @@ async function mapTasksOwners(tasks) {
   );
 }
 
-function normalizeDeadline(rawDeadline, fallbackIso) {
-  if (!rawDeadline) return fallbackIso;
-
-  let parsed = null;
-  if (rawDeadline instanceof Date) {
-    parsed = rawDeadline;
-  } else if (typeof rawDeadline === 'number') {
-    parsed = new Date(rawDeadline);
-  } else if (typeof rawDeadline === 'string') {
-    const trimmed = rawDeadline.trim();
-    const dmyMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
-    if (dmyMatch) {
-      const day = dmyMatch[1].padStart(2, '0');
-      const month = dmyMatch[2].padStart(2, '0');
-      const year = dmyMatch[3].length === 2 ? `20${dmyMatch[3]}` : dmyMatch[3];
-      parsed = new Date(`${year}-${month}-${day}`);
-    } else {
-      parsed = new Date(trimmed);
-    }
-  }
-
-  if (!parsed || Number.isNaN(parsed.getTime())) {
-    return fallbackIso;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const maxDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
-
-  if (parsed < today || parsed > maxDate) {
-    return fallbackIso;
-  }
-
-  return parsed.toISOString();
-}
-
 async function runAnalysisPipeline(trimmedText) {
   const needsChunking = trimmedText.length > 15000;
   const chunks = needsChunking
@@ -100,13 +65,11 @@ async function runAnalysisPipeline(trimmedText) {
     ? mergeChunkResults(chunkResults)
     : chunkResults[0];
 
-  const rawTasks = (mergedResult.tasks || []).map((t, i) => {
-    const weekOffset = Math.min(i + 1, 2);
-    const fallbackDate = new Date(Date.now() + weekOffset * 7 * 86400000).toISOString();
+  const rawTasks = (mergedResult.tasks || []).map((t) => {
     return {
       description: t.description || '',
       owner: t.owner || '',
-      deadline: normalizeDeadline(t.deadline, fallbackDate),
+      deadline: parseDeadline(t.deadline),
       priority: ['High', 'Medium', 'Low'].includes(t.priority) ? t.priority : 'Medium',
       status: 'Pending',
       confidence: typeof t.confidence === 'number' ? t.confidence : 0.7,
