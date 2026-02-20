@@ -23,6 +23,16 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
     },
+    refreshTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    refreshTokenIssuedAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   { timestamps: true }
 );
@@ -38,10 +48,14 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Remove password from JSON output
+// Remove password and sensitive fields from JSON output
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
+  delete obj.refreshTokenHash;
+  delete obj.refreshTokenIssuedAt;
+  delete obj.createdAt;
+  delete obj.updatedAt;
   return obj;
 };
 

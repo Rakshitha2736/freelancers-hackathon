@@ -7,10 +7,26 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests
   timeout: 15000,
 });
 
-// Attach JWT token to every request
+// Flag to prevent refresh loops
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Attach JWT token to requests (for backward compatibility with Bearer token)
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -22,21 +38,56 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Global error handler
+// Handle 401 and refresh token
 API.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response) {
-      if (error.response.status === 401) {
-        // Only redirect if not already on auth pages to prevent infinite loops
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return API(originalRequest);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Try to refresh token
+        await API.post('/auth/refresh');
+        isRefreshing = false;
+        processQueue(null);
+        return API(originalRequest);
+      } catch (refreshError) {
+        isRefreshing = false;
+        processQueue(refreshError, null);
+        
+        // Clear auth data and redirect to login
         const currentPath = window.location.pathname;
         if (currentPath !== '/login' && currentPath !== '/signup') {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/login';
         }
+        return Promise.reject(refreshError);
       }
     }
+
+    if (error.response?.status === 401) {
+      // Clear auth data and redirect to login
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login' && currentPath !== '/signup') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+
     return Promise.reject(error);
   }
 );

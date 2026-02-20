@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const { initializeSocket } = require('./socket');
 const { securityMiddleware, apiLimiter } = require('./middleware/security');
@@ -35,6 +36,7 @@ const corsOptions = {
 // Middleware
 app.use(helmet());
 app.use(cors(corsOptions));
+app.use(cookieParser(process.env.COOKIE_SECRET || process.env.JWT_SECRET));
 app.use(securityMiddleware);
 app.use(apiLimiter);
 app.use(express.json({ limit: '5mb' }));
