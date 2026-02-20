@@ -42,6 +42,42 @@ async function mapTasksOwners(tasks) {
   );
 }
 
+function normalizeDeadline(rawDeadline, fallbackIso) {
+  if (!rawDeadline) return fallbackIso;
+
+  let parsed = null;
+  if (rawDeadline instanceof Date) {
+    parsed = rawDeadline;
+  } else if (typeof rawDeadline === 'number') {
+    parsed = new Date(rawDeadline);
+  } else if (typeof rawDeadline === 'string') {
+    const trimmed = rawDeadline.trim();
+    const dmyMatch = trimmed.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      const year = dmyMatch[3].length === 2 ? `20${dmyMatch[3]}` : dmyMatch[3];
+      parsed = new Date(`${year}-${month}-${day}`);
+    } else {
+      parsed = new Date(trimmed);
+    }
+  }
+
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    return fallbackIso;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maxDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+  if (parsed < today || parsed > maxDate) {
+    return fallbackIso;
+  }
+
+  return parsed.toISOString();
+}
+
 async function runAnalysisPipeline(trimmedText) {
   const needsChunking = trimmedText.length > 15000;
   const chunks = needsChunking
@@ -59,15 +95,19 @@ async function runAnalysisPipeline(trimmedText) {
     ? mergeChunkResults(chunkResults)
     : chunkResults[0];
 
-  const rawTasks = (mergedResult.tasks || []).map((t, i) => ({
-    description: t.description || '',
-    owner: t.owner || '',
-    deadline: t.deadline || new Date(Date.now() + (i + 1) * 7 * 86400000).toISOString(),
-    priority: ['High', 'Medium', 'Low'].includes(t.priority) ? t.priority : 'Medium',
-    status: 'Pending',
-    confidence: typeof t.confidence === 'number' ? t.confidence : 0.7,
-    fromChunk: t.fromChunk || undefined,
-  }));
+  const rawTasks = (mergedResult.tasks || []).map((t, i) => {
+    const weekOffset = Math.min(i + 1, 2);
+    const fallbackDate = new Date(Date.now() + weekOffset * 7 * 86400000).toISOString();
+    return {
+      description: t.description || '',
+      owner: t.owner || '',
+      deadline: normalizeDeadline(t.deadline, fallbackDate),
+      priority: ['High', 'Medium', 'Low'].includes(t.priority) ? t.priority : 'Medium',
+      status: 'Pending',
+      confidence: typeof t.confidence === 'number' ? t.confidence : 0.7,
+      fromChunk: t.fromChunk || undefined,
+    };
+  });
 
   const tasksWithOwners = await mapTasksOwners(rawTasks);
 
@@ -294,8 +334,22 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // ─── POST /api/analyses/:id/analyze ────────────────────────────────────────
+const ANALYZE_COOLDOWN_MS = 60000;
+const analyzeCooldowns = new Map();
+
 router.post('/:id/analyze', auth, async (req, res) => {
   try {
+    const userId = req.user._id.toString();
+    const lastAt = analyzeCooldowns.get(userId);
+    if (lastAt && Date.now() - lastAt < ANALYZE_COOLDOWN_MS) {
+      const retryAfterMs = ANALYZE_COOLDOWN_MS - (Date.now() - lastAt);
+      return res.status(429).json({
+        message: 'Analysis is already running. Please wait a moment and try again.',
+        retryAfterMs
+      });
+    }
+    analyzeCooldowns.set(userId, Date.now());
+
     const analysis = await Analysis.findOne({
       _id: req.params.id,
       userId: req.user._id,
@@ -337,21 +391,25 @@ router.post('/:id/analyze', auth, async (req, res) => {
   } catch (err) {
     console.error('[Analyze] Error occurred:', err.message);
     console.error('[Analyze] Stack:', err.stack);
-    
+
     // More specific error messages
     if (err.message?.includes('API key')) {
       return res.status(503).json({ message: 'AI service authentication failed. Please contact administrator.' });
     }
-    
+
     if (err.status === 429 || err.message?.includes('rate limit')) {
       return res.status(429).json({ message: 'AI service rate limit exceeded. Please try again in a moment.' });
     }
-    
+
     if (err.message?.includes('quota') || err.message?.includes('billing')) {
       return res.status(503).json({ message: 'AI service quota exceeded. Please contact administrator.' });
     }
-    
-    res.status(500).json({ message: 'Failed to generate summary. Please try again.', error: err.message });
+
+    return res.status(500).json({ message: 'Failed to generate summary. Please try again.', error: err.message });
+  } finally {
+    if (req.user?._id) {
+      analyzeCooldowns.delete(req.user._id.toString());
+    }
   }
 });
 

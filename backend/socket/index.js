@@ -8,9 +8,15 @@ let io = null;
 // Initialize Socket.io
 const initializeSocket = (app) => {
   const server = http.createServer(app);
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3002'
+  ].filter(Boolean);
+
   io = new Server(server, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: allowedOrigins,
       methods: ['GET', 'POST']
     }
   });

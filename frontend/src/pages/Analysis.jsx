@@ -6,7 +6,7 @@ import useSocket from '../hooks/useSocket';
 import TaskTable from '../components/TaskTable';
 import { TaskTemplateSelector } from '../components/TaskTemplateSelector';
 import { getAnalysis, confirmSummary } from '../services/api';
-import { exportToJSON, exportToCSV, exportToMarkdown, saveDraft, loadDraft, deleteDraft } from '../utils/exportUtils';
+import { exportToJSON, exportToCSV, exportToMarkdown, exportToPDF, saveDraft, loadDraft, deleteDraft } from '../utils/exportUtils';
 
 const Analysis = () => {
   const { id } = useParams();
@@ -434,6 +434,12 @@ const Analysis = () => {
               onClick={() => exportToMarkdown({ summary, decisions, tasks, metadata }, `analysis-${id}.md`)}
             >
               📝 Markdown
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => exportToPDF({ summary, decisions, tasks, metadata, meetingMetadata }, { filename: `analysis-${id}.pdf`, currentUser: user })}
+            >
+              📄 PDF
             </button>
             <button
               className="btn btn-outline"

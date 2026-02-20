@@ -9,6 +9,7 @@ const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+  const retryRef = useRef({});
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -84,6 +85,23 @@ const FileUploadDropZone = ({ onFileSelect, metadata = {} }) => {
 
       // Trigger analysis in background (no await)
       analyzeExisting(data.analysisId).catch(err => {
+        const status = err?.response?.status;
+        if (status === 429) {
+          const attempt = retryRef.current[data.analysisId] || 0;
+          if (attempt < 1) {
+            retryRef.current[data.analysisId] = attempt + 1;
+            setError('AI rate limit reached. Retrying in 20 seconds...');
+            setTimeout(() => {
+              analyzeExisting(data.analysisId).catch(retryErr => {
+                console.error('Background analysis retry error:', retryErr);
+                setError('AI rate limit reached. Please try again in a minute.');
+              });
+            }, 20000);
+            return;
+          }
+          setError('AI rate limit reached. Please try again in a minute.');
+          return;
+        }
         console.error('Background analysis error:', err);
       });
 
