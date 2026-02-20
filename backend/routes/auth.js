@@ -6,6 +6,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { authStrictLimiter, csrfTokenHandler } = require('../middleware/security');
 const { handleValidationErrors } = require('../middleware/validation');
+const { auditLog } = require('../middleware/auditLog');
 
 const router = express.Router();
 
@@ -50,14 +51,16 @@ router.post(
   async (req, res) => {
     try {
       const { name, email, password } = req.body;
+      const lowerEmail = email.toLowerCase();
 
       // Check existing user
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      const existingUser = await User.findOne({ email: lowerEmail });
       if (existingUser) {
+        await auditLog(null, lowerEmail, 'SIGNUP', 'failure', 'Email already registered', req);
         return res.status(409).json({ message: 'This email is already registered.' });
       }
 
-      const user = await User.create({ name: name.trim(), email, password });
+      const user = await User.create({ name: name.trim(), email: lowerEmail, password });
       
       // Generate tokens
       const accessToken = generateToken(user._id, accessTokenSecret, '15m');
@@ -67,6 +70,9 @@ router.post(
       user.refreshTokenHash = hashToken(refreshToken);
       user.refreshTokenIssuedAt = new Date();
       await user.save();
+
+      // Log signup
+      await auditLog(user._id, lowerEmail, 'SIGNUP', 'success', 'New user registered', req);
 
       setAuthCookies(res, accessToken, refreshToken);
 
@@ -96,16 +102,37 @@ router.post(
   async (req, res) => {
     try {
       const { email, password } = req.body;
+      const lowerEmail = email.toLowerCase();
 
-      const user = await User.findOne({ email: email.toLowerCase() });
+      const user = await User.findOne({ email: lowerEmail }).select('+accountLockedUntil +failedLoginAttempts');
+      
+      // Check if account is locked
+      if (user && user.isLocked()) {
+        await auditLog(user._id, lowerEmail, 'LOGIN_FAILED', 'warning', 'Account temporarily locked', req);
+        return res.status(429).json({ message: 'Account temporarily locked. Try again in 30 minutes.' });
+      }
+
       if (!user) {
+        await auditLog(null, lowerEmail, 'LOGIN_FAILED', 'failure', 'User not found', req);
         return res.status(401).json({ message: 'Invalid email or password.' });
       }
 
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
+        // Record failed attempt
+        await user.recordFailedLogin();
+        await auditLog(user._id, lowerEmail, 'LOGIN_FAILED', 'failure', `Failed attempt ${user.failedLoginAttempts}/5`, req);
+        
+        if (user.isLocked()) {
+          return res.status(429).json({ message: 'Too many failed attempts. Account locked for 30 minutes.' });
+        }
+        
         return res.status(401).json({ message: 'Invalid email or password.' });
       }
+
+      // Reset login attempts on success
+      user.failedLoginAttempts = 0;
+      user.accountLockedUntil = null;
 
       // Generate tokens
       const accessToken = generateToken(user._id, accessTokenSecret, '15m');
@@ -115,6 +142,9 @@ router.post(
       user.refreshTokenHash = hashToken(refreshToken);
       user.refreshTokenIssuedAt = new Date();
       await user.save();
+
+      // Log successful login
+      await auditLog(user._id, lowerEmail, 'LOGIN_SUCCESS', 'success', 'User authenticated', req);
 
       setAuthCookies(res, accessToken, refreshToken);
 
@@ -198,9 +228,16 @@ const clearAuthCookies = (res) => {
   res.cookie('refresh_token', '', { maxAge: 0, httpOnly: true });
 };
 
-router.post('/logout', (req, res) => {
-  clearAuthCookies(res);
-  res.json({ message: 'Logged out.' });
+router.post('/logout', auth, async (req, res) => {
+  try {
+    // Log logout
+    await auditLog(req.user._id, req.user.email, 'LOGOUT', 'success', 'User logged out', req);
+    clearAuthCookies(res);
+    res.json({ message: 'Logged out.' });
+  } catch (err) {
+    clearAuthCookies(res);
+    res.json({ message: 'Logged out.' });
+  }
 });
 
 module.exports = router;
